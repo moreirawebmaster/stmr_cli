@@ -1,0 +1,26 @@
+name: stmr_cli
+description: Official CLI for STMR Flutter projects
+version: 1.0.0
+homepage: https://github.com/moreirawebmaster/stmr_cli
+
+environment:
+  sdk: ">=3.0.0 <4.0.0"
+
+dependencies:
+  args: ^2.4.2
+  cli_util: ^0.4.0
+  http: ^1.1.0
+  path: ^1.8.3
+  yaml: ^3.1.2
+  recase: ^4.1.0
+  archive: ^3.3.7
+  process_run: ^0.12.5+2
+  mason_logger: ^0.2.7
+  dart_style: ^2.3.2
+
+dev_dependencies:
+  test: ^1.24.6
+  lints: ^2.1.1
+
+executables:
+  stmr:
