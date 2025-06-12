@@ -3,16 +3,18 @@ import 'dart:io';
 import 'package:args/args.dart';
 import 'package:mason_logger/mason_logger.dart';
 import 'package:path/path.dart' as path;
-import 'package:process_run/process_run.dart';
 import 'package:recase/recase.dart';
 
 import '../utils/utils.dart';
 
+/// Comando responsável por criar novos projetos e recursos
 class CreateCommand {
-  final Logger _logger;
-
+  /// Construtor que recebe o logger para output
   CreateCommand(this._logger);
 
+  final Logger _logger;
+
+  /// Executa o comando de criação
   Future<void> run(ArgResults command) async {
     final subcommands = command.arguments;
 
@@ -79,10 +81,13 @@ class CreateCommand {
   }
 
   Future<void> _cloneSkeleton(String projectPath) async {
-    final result = await run('git', ['clone', 'https://github.com/moreirawebmaster/skeleton.git', projectPath]);
+    final result = await Process.run(
+      'git',
+      ['clone', 'https://github.com/moreirawebmaster/skeleton.git', projectPath],
+    );
 
     if (result.exitCode != 0) {
-      throw Exception('Falha ao clonar o skeleton');
+      throw Exception('Falha ao clonar o skeleton: ${result.stderr}');
     }
 
     // Remover .git
@@ -114,7 +119,7 @@ class CreateCommand {
         await FileUtils.replaceInFile(file, [
           StringReplacement('skeleton', projectNameSnake),
           StringReplacement('Skeleton', projectNamePascal),
-          StringReplacement('tech.stmr', 'com.${projectNameSnake}'),
+          StringReplacement('tech.stmr', 'com.$projectNameSnake'),
         ]);
       }
     }
@@ -154,10 +159,14 @@ class CreateCommand {
   }
 
   Future<void> _installDependencies(String projectPath) async {
-    final result = await run('flutter', ['pub', 'get'], workingDirectory: projectPath);
+    final result = await Process.run(
+      'flutter',
+      ['pub', 'get'],
+      workingDirectory: projectPath,
+    );
 
     if (result.exitCode != 0) {
-      throw Exception('Falha ao instalar dependências Flutter');
+      throw Exception('Falha ao instalar dependências Flutter: ${result.stderr}');
     }
   }
 }

@@ -5,9 +5,11 @@ import 'package:mason_logger/mason_logger.dart';
 
 import 'commands/commands.dart';
 
+/// Classe principal que executa os comandos do CLI
 class StmrCliRunner {
   final Logger _logger = Logger();
 
+  /// Executa o CLI com os argumentos fornecidos
   Future<void> run(List<String> arguments) async {
     final parser = ArgParser()
       ..addCommand('create')

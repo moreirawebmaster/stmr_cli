@@ -1,6 +1,8 @@
 import 'package:recase/recase.dart';
 
+/// Templates para geração de arquivos de features
 class FeatureTemplates {
+  /// Gera o template do binding da feature
   static String binding(String featureNamePascal, String featureNameSnake) {
     return '''import 'package:engine/engine.dart';
 import '../presentations/controllers/${featureNameSnake}_controller.dart';
@@ -17,6 +19,7 @@ class ${featureNamePascal}Binding extends EngineBaseBinding {
 }''';
   }
 
+  /// Gera o template do model da feature
   static String model(String featureNamePascal, String featureNameSnake) {
     return '''import 'package:engine/engine.dart';
 
@@ -45,6 +48,7 @@ class ${featureNamePascal}Model extends EngineBaseModel {
 }''';
   }
 
+  /// Gera o template do controller da feature
   static String controller(String featureNamePascal, String featureNameSnake) {
     return '''import 'package:engine/engine.dart';
 import '../use_cases/${featureNameSnake}_use_case.dart';
@@ -97,6 +101,7 @@ class ${featureNamePascal}Controller extends EngineBaseController {
 }''';
   }
 
+  /// Gera o template da page da feature
   static String page(String featureNamePascal, String featureNameSnake) {
     return '''import 'package:flutter/material.dart';
 import 'package:engine/engine.dart';
@@ -110,7 +115,7 @@ class ${featureNamePascal}Page extends GetView<${featureNamePascal}Controller> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('${ReCase(featureNamePascal).titleCase}'),
+        title: Text(ReCase(featureNamePascal).titleCase),
         key: ${featureNamePascal}Keys.appBar,
       ),
       body: Obx(() {
@@ -126,7 +131,7 @@ class ${featureNamePascal}Page extends GetView<${featureNamePascal}Controller> {
             children: [
               // Implementar interface aqui
               Text(
-                'Página ${ReCase(featureNamePascal).titleCase}',
+                'Página \${ReCase(featureNamePascal).titleCase}',
                 key: ${featureNamePascal}Keys.title,
                 style: Theme.of(context).textTheme.headlineLarge,
               ),
@@ -145,6 +150,7 @@ class ${featureNamePascal}Page extends GetView<${featureNamePascal}Controller> {
 }''';
   }
 
+  /// Gera o template do use case da feature
   static String useCase(String featureNamePascal, String featureNameSnake) {
     return '''import 'package:engine/engine.dart';
 import '../repositories/${featureNameSnake}_repository.dart';
@@ -173,6 +179,7 @@ class ${featureNamePascal}UseCase {
 }''';
   }
 
+  /// Gera o template do repository da feature
   static String repository(String featureNamePascal, String featureNameSnake) {
     return '''import 'package:engine/engine.dart';
 
@@ -186,7 +193,7 @@ class ${featureNamePascal}Repository extends EngineBaseRepository implements I${
   Future<EngineResult<String, dynamic>> getData() async {
     try {
       // Implementar chamada para API ou fonte de dados
-      final response = await get('/api/${featureNameSnake}');
+      final response = await get('/api/$featureNameSnake');
       
       if (response.isSuccess) {
         return Successful(response.data);
@@ -200,6 +207,7 @@ class ${featureNamePascal}Repository extends EngineBaseRepository implements I${
 }''';
   }
 
+  /// Gera o template das keys da feature
   static String keys(String featureNamePascal, String featureNameSnake) {
     return '''import 'package:flutter/material.dart';
 
@@ -215,6 +223,7 @@ class ${featureNamePascal}Keys {
 }''';
   }
 
+  /// Gera o template das rotas da feature
   static String routes(String featureName, String featureNameSnake) {
     final featureNamePascal = ReCase(featureName).pascalCase;
 
@@ -223,11 +232,11 @@ import '../presentations/pages/${featureNameSnake}_page.dart';
 import '../bindings/${featureNameSnake}_binding.dart';
 
 class ${featureNamePascal}Routes {
-  static const String ${featureNameSnake} = '/${featureNameSnake}';
+  static const String $featureNameSnake = '/$featureNameSnake';
 
   static final routes = [
     GetPage(
-      name: ${featureNameSnake},
+      name: $featureNameSnake,
       page: () => const ${featureNamePascal}Page(),
       binding: ${featureNamePascal}Binding(),
     ),

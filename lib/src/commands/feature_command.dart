@@ -6,13 +6,15 @@ import 'package:path/path.dart' as path;
 import 'package:recase/recase.dart';
 
 import '../templates/templates.dart';
-import '../utils/utils.dart';
 
+/// Comando responsável por criar features no padrão clean architecture
 class FeatureCommand {
-  final Logger _logger;
-
+  /// Construtor que recebe o logger para output
   FeatureCommand(this._logger);
 
+  final Logger _logger;
+
+  /// Executa o comando de criação de feature
   Future<void> run(ArgResults command) async {
     final args = command.arguments;
 
