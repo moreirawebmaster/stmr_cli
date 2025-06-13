@@ -188,43 +188,20 @@ class UpgradeCommand implements ICommand {
       // Instalar nova versão
       _logger.info('⬇️  Instalando versão $version...');
 
-      // Tenta instalar com tag primeiro
-      List<String> installArgs = [
+      // Usar sempre a versão mais recente do repositório
+      // A detecção de versão serve apenas para informar o usuário
+      final installArgs = [
         'pub',
         'global',
         'activate',
-        'stmr_cli',
-        '--source',
+        '-s',
         'git',
         'https://github.com/moreirawebmaster/stmr_cli.git',
       ];
 
-      // Se a versão não é a mesma do pubspec.yaml atual, tenta usar a tag
-      if (version.startsWith('v')) {
-        installArgs.addAll(['--git-ref', version]);
-      } else if (version != '1.0.0') {
-        installArgs.addAll(['--git-ref', 'v$version']);
-      }
-
       final installResult = await Process.run('dart', installArgs);
-
       if (installResult.exitCode != 0) {
-        // Se falhou com tag, tenta sem tag (versão mais recente)
-        _logger.warn('⚠️  Falha ao instalar versão específica, tentando versão mais recente...');
-        final fallbackArgs = [
-          'pub',
-          'global',
-          'activate',
-          'stmr_cli',
-          '--source',
-          'git',
-          'https://github.com/moreirawebmaster/stmr_cli.git',
-        ];
-
-        final fallbackResult = await Process.run('dart', fallbackArgs);
-        if (fallbackResult.exitCode != 0) {
-          throw Exception('Erro ao instalar nova versão: ${fallbackResult.stderr}');
-        }
+        throw Exception('Erro ao instalar nova versão: ${installResult.stderr}');
       }
 
       _logger.info('✅ Instalação concluída!');
