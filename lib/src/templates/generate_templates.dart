@@ -2,7 +2,7 @@
 class GenerateTemplates {
   /// Gera o template de uma page que extende EngineBasePage
   static String page(String pageNamePascal, String pageNameSnake, String moduleNameSnake) {
-    return '''import 'package:engine/engine.dart';
+    return '''import 'package:engine/lib.dart';
 import 'package:flutter/material.dart';
 import 'package:design_system/lib.dart';
 
@@ -58,8 +58,7 @@ class ${pageNamePascal}Page extends EngineBasePage<${pageNamePascal}Controller> 
 
   /// Gera o template de um controller que extende EngineBaseController
   static String controller(String controllerNamePascal, String controllerNameSnake, String moduleNameSnake) {
-    return '''import 'package:engine/engine.dart';
-import 'package:get/get.dart';
+    return '''import 'package:engine/lib.dart';
 
 /// Controller para $controllerNamePascal
 class ${controllerNamePascal}Controller extends EngineBaseController {
@@ -72,15 +71,15 @@ class ${controllerNamePascal}Controller extends EngineBaseController {
 
   @override
   void onInit() {
-    super.onInit();
     // Inicialização do controller
+    super.onInit();
   }
 
   @override
   void onReady() {
-    super.onReady();
     // Carregamento inicial dos dados
     _loadData();
+    super.onReady();
   }
 
   @override
@@ -117,8 +116,7 @@ class ${controllerNamePascal}Controller extends EngineBaseController {
 
   /// Gera o template de um repository com interface e implementação
   static String repository(String repositoryNamePascal, String repositoryNameSnake, String moduleNameSnake) {
-    return '''import 'package:engine/engine.dart';
-import 'package:get/get.dart';
+    return '''import 'package:engine/lib.dart';
 
 /// Interface para o repositório $repositoryNamePascal
 abstract class I${repositoryNamePascal}Repository {
@@ -141,8 +139,8 @@ class ${repositoryNamePascal}Repository extends EngineBaseRepository implements 
   
   @override
   void onInit() {
-    super.onInit();
     // Inicialização do repositório
+    super.onInit();
   }
 
   @override
@@ -209,49 +207,44 @@ class ${repositoryNamePascal}Repository extends EngineBaseRepository implements 
 
   /// Gera o template de um DTO baseado em um JSON
   static String dto(String dtoNamePascal, String dtoNameSnake, Map<String, dynamic> jsonData) {
+    final constructorParams = _generateDtoConstructorParams(jsonData);
+    final fromMapBody = _generateDtoFromMap(jsonData);
+    final toMapBody = _generateDtoToMap(jsonData);
+    final copyWithParams = _generateDtoCopyWithParams(jsonData);
+    final copyWithBody = _generateDtoCopyWithBody(jsonData);
     final properties = _generateDtoProperties(jsonData);
-    final fromJson = _generateDtoFromJson(jsonData);
-    final toJson = _generateDtoToJson(jsonData);
 
-    return '''import 'package:engine/engine.dart';
-
-/// DTO para resposta de $dtoNamePascal
-class ${dtoNamePascal}ResponseDto extends EngineBaseModel {
-  $properties
-
-  /// Construtor
+    return '''/// DTO para resposta de $dtoNamePascal
+class ${dtoNamePascal}ResponseDto {
+  // Construtor
   ${dtoNamePascal}ResponseDto({
-${_generateDtoConstructorParams(jsonData)}
+$constructorParams
   });
 
-  @override
-  List<Object?> get props => [
-${_generateDtoProps(jsonData)}
-  ];
+  // Factories
+  factory ${dtoNamePascal}ResponseDto.fromMap(Map<String, dynamic> map) => ${dtoNamePascal}ResponseDto(
+$fromMapBody
+      );
 
-  /// Cria uma instância a partir de um mapa
-  factory ${dtoNamePascal}ResponseDto.fromJson(Map<String, dynamic> json) {
-    return ${dtoNamePascal}ResponseDto(
-$fromJson
-    );
-  }
+  factory ${dtoNamePascal}ResponseDto.empty() => ${dtoNamePascal}ResponseDto(
+${_generateEmptyFactoryParams(jsonData)}
+      );
 
-  /// Converte a instância para um mapa
-  @override
-  Map<String, dynamic> toJson() {
-    return {
-$toJson
-    };
-  }
+  // Methods
+  Map<String, dynamic> toMap() => {
+$toMapBody
+      };
 
-  /// Cria uma cópia do DTO com os campos atualizados
   ${dtoNamePascal}ResponseDto copyWith({
-${_generateDtoCopyWithParams(jsonData)}
+$copyWithParams
   }) {
     return ${dtoNamePascal}ResponseDto(
-${_generateDtoCopyWithBody(jsonData)}
+$copyWithBody
     );
   }
+
+  // Properties
+$properties
 }''';
   }
 
@@ -280,49 +273,53 @@ ${_generateDtoCopyWithBody(jsonData)}
     return buffer.toString();
   }
 
-  /// Gera a lista de props para EngineBaseModel
-  static String _generateDtoProps(Map<String, dynamic> jsonData) {
+  /// Gera o código para o método fromMap
+  static String _generateDtoFromMap(Map<String, dynamic> jsonData) {
     final buffer = StringBuffer();
 
     jsonData.forEach((key, value) {
-      buffer.writeln('    $key,');
-    });
+      final dartType = _getDartType(value);
+      final defaultValue = _getDefaultValue(value);
 
-    return buffer.toString();
-  }
-
-  /// Gera o código para o método fromJson
-  static String _generateDtoFromJson(Map<String, dynamic> jsonData) {
-    final buffer = StringBuffer();
-
-    jsonData.forEach((key, value) {
       if (value is Map) {
-        buffer.writeln(
-          '      $key: json[\'$key\'] != null ? Map<String, dynamic>.from(json[\'$key\']) : <String, dynamic>{},',
-        );
+        buffer.writeln('        $key: Map<String, dynamic>.from(map[\'$key\'] ?? {}),');
       } else if (value is List) {
         if (value.isNotEmpty && value.first is Map) {
-          buffer.writeln(
-            '      $key: (json[\'$key\'] as List<dynamic>?)?.map((e) => Map<String, dynamic>.from(e)).toList() ?? [],',
-          );
+          buffer.writeln('        $key: List<Map<String, dynamic>>.from(map[\'$key\'] ?? []),');
         } else {
-          buffer.writeln('      $key: (json[\'$key\'] as List<dynamic>?)?.cast<${_getListType(value)}>() ?? [],');
+          final listType = _getListType(value);
+          buffer.writeln('        $key: List<$listType>.from(map[\'$key\'] ?? []),');
         }
+      } else if (dartType == 'int') {
+        buffer.writeln('        $key: map[\'$key\']?.toInt() ?? $defaultValue,');
+      } else if (dartType == 'double') {
+        buffer.writeln('        $key: map[\'$key\']?.toDouble() ?? $defaultValue,');
       } else {
-        final type = _getDartType(value);
-        buffer.writeln('      $key: json[\'$key\'] as $type,');
+        buffer.writeln('        $key: map[\'$key\'] ?? $defaultValue,');
       }
     });
 
     return buffer.toString();
   }
 
-  /// Gera o código para o método toJson
-  static String _generateDtoToJson(Map<String, dynamic> jsonData) {
+  /// Gera o código para o método toMap
+  static String _generateDtoToMap(Map<String, dynamic> jsonData) {
     final buffer = StringBuffer();
 
     jsonData.forEach((key, value) {
-      buffer.writeln('      \'$key\': $key,');
+      buffer.writeln('        \'$key\': $key,');
+    });
+
+    return buffer.toString();
+  }
+
+  /// Gera os parâmetros para o factory empty
+  static String _generateEmptyFactoryParams(Map<String, dynamic> jsonData) {
+    final buffer = StringBuffer();
+
+    jsonData.forEach((key, value) {
+      final defaultValue = _getDefaultValue(value);
+      buffer.writeln('        $key: $defaultValue,');
     });
 
     return buffer.toString();
@@ -369,5 +366,16 @@ ${_generateDtoCopyWithBody(jsonData)}
   static String _getListType(List<dynamic> list) {
     if (list.isEmpty) return 'dynamic';
     return _getDartType(list.first);
+  }
+
+  /// Retorna o valor padrão para um tipo
+  static String _getDefaultValue(dynamic value) {
+    if (value is String) return "''";
+    if (value is int) return '0';
+    if (value is double) return '0.0';
+    if (value is bool) return 'false';
+    if (value is List) return '[]';
+    if (value is Map) return '{}';
+    return 'null';
   }
 }
