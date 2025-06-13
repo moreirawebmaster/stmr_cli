@@ -23,16 +23,21 @@ class GenerateCommand implements ICommand {
 
   @override
   Future<void> run(ArgResults command) async {
+    // Verificar flags primeiro
+    if (command['help'] as bool) {
+      _showHelp();
+      return;
+    }
+
+    if (command['version'] as bool) {
+      _logger.info(PubspecUtils.getVersion());
+      return;
+    }
+
     final args = command.arguments;
 
     if (args.isEmpty) {
-      _logger.err('❌ Especifique o que deseja gerar: page, controller, repository, dto');
-      _logger.info('Uso: stmr generate <tipo> <nome> [opções]');
-      _logger.info('\nTipos disponíveis:');
-      _logger.info('  page       - Gera uma nova page com controller');
-      _logger.info('  controller - Gera um novo controller');
-      _logger.info('  repository - Gera um novo repository com interface');
-      _logger.info('  dto        - Gera um novo DTO baseado em JSON');
+      _showHelp();
       return;
     }
 
@@ -42,7 +47,7 @@ class GenerateCommand implements ICommand {
     // Validar se o tipo é válido
     if (!['page', 'controller', 'repository', 'dto'].contains(type)) {
       _logger.err('❌ Tipo desconhecido: $type');
-      _logger.info('Tipos disponíveis: page, controller, repository, dto');
+      _showHelp();
       return;
     }
 
@@ -318,5 +323,28 @@ class GenerateCommand implements ICommand {
   Future<void> _createFile(String path, String content) async {
     final file = File(path);
     await file.writeAsString(content);
+  }
+
+  /// Mostra informações de ajuda do comando generate
+  void _showHelp() {
+    _logger.info('Comando para gerar diversos elementos do projeto');
+    _logger.info('');
+    _logger.info('Uso: stmr generate <tipo> <nome> [opções]');
+    _logger.info('');
+    _logger.info('Tipos disponíveis:');
+    _logger.info('  page       - Gera uma nova page com controller');
+    _logger.info('  controller - Gera um novo controller');
+    _logger.info('  repository - Gera um novo repository com interface');
+    _logger.info('  dto        - Gera um novo DTO baseado em JSON');
+    _logger.info('');
+    _logger.info('Exemplos:');
+    _logger.info('  stmr generate page login');
+    _logger.info('  stmr generate controller user');
+    _logger.info('  stmr generate repository auth');
+    _logger.info('  stmr generate dto user \'{"id": 1, "name": "John"}\'');
+    _logger.info('');
+    _logger.info('Flags:');
+    _logger.info('  -h, --help     Mostra esta ajuda');
+    _logger.info('  -v, --version  Mostra a versão');
   }
 }

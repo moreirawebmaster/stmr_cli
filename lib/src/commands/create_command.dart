@@ -256,9 +256,4 @@ class CreateCommand implements ICommand {
       _logger.warn('  ⚠️  Erro ao reorganizar diretórios Kotlin: $e');
     }
   }
-
-  Future<void> _createFile(String path, String content) async {
-    final file = File(path);
-    await file.writeAsString(content);
-  }
 }

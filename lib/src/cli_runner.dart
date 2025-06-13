@@ -45,7 +45,7 @@ class CliRunner {
       }
 
       if (results['version'] as bool) {
-        _logger.info('1.0.0');
+        _logger.info(PubspecUtils.getVersion());
         return;
       }
 

@@ -3,7 +3,6 @@ import 'dart:io';
 import 'package:args/args.dart';
 import 'package:mason_logger/mason_logger.dart';
 import 'package:stmr_cli/lib.dart';
-import 'package:version/version.dart';
 
 /// Comando responsável por atualizar o CLI para a última versão
 class UpgradeCommand implements ICommand {
@@ -16,12 +15,24 @@ class UpgradeCommand implements ICommand {
   ArgParser build() {
     return ArgParser()
       ..addFlag('help', abbr: 'h', help: 'Mostra informações de ajuda')
+      ..addFlag('version', abbr: 'v', help: 'Mostra a versão atual')
       ..addFlag('force', abbr: 'f', help: 'Força a atualização mesmo se já estiver na última versão')
       ..addFlag('check', abbr: 'c', help: 'Apenas verifica se há atualizações disponíveis');
   }
 
   @override
   Future<void> run(ArgResults command) async {
+    // Verificar flags primeiro
+    if (command['help'] as bool) {
+      _showHelp();
+      return;
+    }
+
+    if (command['version'] as bool) {
+      _logger.info(PubspecUtils.getVersion());
+      return;
+    }
+
     final force = command['force'] as bool;
     final checkOnly = command['check'] as bool;
 
@@ -37,23 +48,22 @@ class UpgradeCommand implements ICommand {
       _logger.info('📦 Última versão disponível: $latestVersion');
 
       // Comparar versões
-      final current = Version.parse(currentVersion);
-      final latest = Version.parse(latestVersion);
+      final currentIsNewer = _compareVersions(currentVersion, latestVersion) >= 0;
 
-      if (current >= latest && !force) {
+      if (currentIsNewer && !force) {
         _logger.success('✅ Você já está na última versão!');
         return;
       }
 
       if (checkOnly) {
-        if (current < latest) {
+        if (!currentIsNewer) {
           _logger.info('🆕 Nova versão disponível: $latestVersion');
           _logger.info('Execute "stmr upgrade" para atualizar.');
         }
         return;
       }
 
-      if (current >= latest && force) {
+      if (currentIsNewer && force) {
         _logger.info('🔄 Forçando reinstalação da versão atual...');
       } else {
         _logger.info('🔄 Atualizando para a versão $latestVersion...');
@@ -83,26 +93,8 @@ class UpgradeCommand implements ICommand {
       }
 
       // Se não conseguir executar o comando stmr, tenta pegar do pubspec.yaml local
-      final pubspecFile = File('pubspec.yaml');
-      if (pubspecFile.existsSync()) {
-        final pubspecContent = await pubspecFile.readAsString();
-        final versionMatch = RegExp(r'version:\s*(.+)').firstMatch(pubspecContent);
-        if (versionMatch != null) {
-          return versionMatch.group(1)!.trim();
-        }
-      }
-
-      // Se não conseguir de forma alguma, tenta verificar se o CLI está instalado globalmente
-      final pubGlobalResult = await Process.run('dart', ['pub', 'global', 'list']);
-      if (pubGlobalResult.exitCode == 0) {
-        final pubList = pubGlobalResult.stdout.toString();
-        final stmrMatch = RegExp(r'stmr_cli\s+(.+)').firstMatch(pubList);
-        if (stmrMatch != null) {
-          return stmrMatch.group(1)!.trim();
-        }
-      }
-
-      throw Exception('Não foi possível determinar a versão atual do CLI');
+      final localVersion = PubspecUtils.getVersion();
+      return localVersion;
     } catch (e) {
       throw Exception('Erro ao obter versão atual: $e');
     }
@@ -239,5 +231,60 @@ class UpgradeCommand implements ICommand {
     } catch (e) {
       throw Exception('Erro ao realizar upgrade: $e');
     }
+  }
+
+  /// Compara duas versões no formato semantic versioning (x.y.z)
+  /// Retorna: -1 se v1 < v2, 0 se v1 == v2, 1 se v1 > v2
+  int _compareVersions(String v1, String v2) {
+    // Remove prefixo 'v' se existir
+    final version1 = v1.startsWith('v') ? v1.substring(1) : v1;
+    final version2 = v2.startsWith('v') ? v2.substring(1) : v2;
+
+    final parts1 = version1.split('.').map(int.parse).toList();
+    final parts2 = version2.split('.').map(int.parse).toList();
+
+    // Garantir que ambas as versões tenham 3 partes
+    while (parts1.length < 3) {
+      parts1.add(0);
+    }
+    while (parts2.length < 3) {
+      parts2.add(0);
+    }
+
+    for (int i = 0; i < 3; i++) {
+      if (parts1[i] < parts2[i]) return -1;
+      if (parts1[i] > parts2[i]) return 1;
+    }
+
+    return 0;
+  }
+
+  /// Mostra informações de ajuda do comando upgrade
+  void _showHelp() {
+    _logger.info('Comando para atualizar o CLI para a versão mais recente');
+    _logger.info('');
+    _logger.info('Uso: stmr upgrade [opções]');
+    _logger.info('');
+    _logger.info('Descrição:');
+    _logger.info('  Verifica se há uma nova versão do CLI disponível e atualiza');
+    _logger.info('  automaticamente. O CLI é instalado/atualizado globalmente');
+    _logger.info('  usando dart pub global.');
+    _logger.info('');
+    _logger.info('Opções:');
+    _logger.info('  -f, --force    Força a reinstalação mesmo na versão atual');
+    _logger.info('  -c, --check    Apenas verifica atualizações sem instalar');
+    _logger.info('  -h, --help     Mostra esta ajuda');
+    _logger.info('  -v, --version  Mostra a versão');
+    _logger.info('');
+    _logger.info('Exemplos:');
+    _logger.info('  stmr upgrade           # Atualiza para a versão mais recente');
+    _logger.info('  stmr upgrade --check   # Apenas verifica se há atualizações');
+    _logger.info('  stmr upgrade --force   # Força a reinstalação');
+    _logger.info('');
+    _logger.info('Processo de atualização:');
+    _logger.info('  1. Verifica a versão atual instalada');
+    _logger.info('  2. Busca a versão mais recente no GitHub');
+    _logger.info('  3. Remove a versão atual (se instalada)');
+    _logger.info('  4. Instala a nova versão do repositório');
   }
 }

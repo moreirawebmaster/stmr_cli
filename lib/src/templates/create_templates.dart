@@ -44,7 +44,7 @@ flutter:
 
   /// Gera o template do arquivo main.dart
   static String main(String projectName) {
-    return '''import 'package:engine/engine.dart';
+    return '''import 'package:engine/lib.dart';
 import 'package:flutter/material.dart';
 import 'package:design_system/lib.dart';
 

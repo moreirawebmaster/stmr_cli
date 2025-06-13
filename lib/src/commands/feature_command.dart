@@ -22,11 +22,21 @@ class FeatureCommand implements ICommand {
 
   @override
   Future<void> run(ArgResults command) async {
+    // Verificar flags primeiro
+    if (command['help'] as bool) {
+      _showHelp();
+      return;
+    }
+
+    if (command['version'] as bool) {
+      _logger.info(PubspecUtils.getVersion());
+      return;
+    }
+
     final args = command.arguments;
 
     if (args.isEmpty) {
-      _logger.err('❌ Nome do módulo é obrigatório');
-      _logger.info('Uso: stmr feature <nome_do_modulo>');
+      _showHelp();
       return;
     }
 
@@ -114,5 +124,37 @@ class FeatureCommand implements ICommand {
   Future<void> _createFile(String path, String content) async {
     final file = File(path);
     await file.writeAsString(content);
+  }
+
+  /// Mostra informações de ajuda do comando feature
+  void _showHelp() {
+    _logger.info('Comando para criar um novo módulo no projeto');
+    _logger.info('');
+    _logger.info('Uso: stmr feature <nome_do_modulo>');
+    _logger.info('');
+    _logger.info('Descrição:');
+    _logger.info('  Cria uma estrutura completa de módulo com:');
+    _logger.info('  - Diretórios para pages, controllers e repositories');
+    _logger.info('  - Arquivos de rotas, bindings e constantes');
+    _logger.info('  - Estrutura organizada para DTOs');
+    _logger.info('');
+    _logger.info('Exemplo:');
+    _logger.info('  stmr feature auth    # Cria módulo de autenticação');
+    _logger.info('  stmr feature user    # Cria módulo de usuário');
+    _logger.info('');
+    _logger.info('Estrutura criada:');
+    _logger.info('  lib/modules/<modulo>/');
+    _logger.info('  ├── presentations/');
+    _logger.info('  │   ├── pages/');
+    _logger.info('  │   └── controllers/');
+    _logger.info('  ├── repositories/');
+    _logger.info('  │   └── dtos/');
+    _logger.info('  ├── <modulo>_routes.dart');
+    _logger.info('  ├── <modulo>_bindings.dart');
+    _logger.info('  └── <modulo>_constants.dart');
+    _logger.info('');
+    _logger.info('Flags:');
+    _logger.info('  -h, --help     Mostra esta ajuda');
+    _logger.info('  -v, --version  Mostra a versão');
   }
 }

@@ -4,7 +4,7 @@ import 'package:recase/recase.dart';
 class FeatureTemplates {
   /// Gera o template do binding da feature
   static String binding(String featureNamePascal, String featureNameSnake) {
-    return '''import 'package:engine/engine.dart';
+    return '''import 'package:engine/lib.dart';
 import '../presentations/controllers/${featureNameSnake}_controller.dart';
 import '../use_cases/${featureNameSnake}_use_case.dart';
 import '../repositories/${featureNameSnake}_repository.dart';
@@ -21,7 +21,7 @@ class ${featureNamePascal}Binding extends EngineBaseBinding {
 
   /// Gera o template do model da feature
   static String model(String featureNamePascal, String featureNameSnake) {
-    return '''import 'package:engine/engine.dart';
+    return '''import 'package:engine/lib.dart';
 
 class ${featureNamePascal}Model extends EngineBaseModel {
   // Adicione suas propriedades aqui
@@ -50,7 +50,7 @@ class ${featureNamePascal}Model extends EngineBaseModel {
 
   /// Gera o template do controller da feature
   static String controller(String featureNamePascal, String featureNameSnake) {
-    return '''import 'package:engine/engine.dart';
+    return '''import 'package:engine/lib.dart';
 import '../use_cases/${featureNameSnake}_use_case.dart';
 import '../models/${featureNameSnake}_model.dart';
 
@@ -104,7 +104,7 @@ class ${featureNamePascal}Controller extends EngineBaseController {
   /// Gera o template da page da feature
   static String page(String featureNamePascal, String featureNameSnake) {
     return '''import 'package:flutter/material.dart';
-import 'package:engine/engine.dart';
+import 'package:engine/lib.dart';
 import '../controllers/${featureNameSnake}_controller.dart';
 import '../keys/${featureNameSnake}_keys.dart';
 
@@ -152,7 +152,7 @@ class ${featureNamePascal}Page extends GetView<${featureNamePascal}Controller> {
 
   /// Gera o template do use case da feature
   static String useCase(String featureNamePascal, String featureNameSnake) {
-    return '''import 'package:engine/engine.dart';
+    return '''import 'package:engine/lib.dart';
 import '../repositories/${featureNameSnake}_repository.dart';
 
 class ${featureNamePascal}UseCase {
@@ -181,7 +181,7 @@ class ${featureNamePascal}UseCase {
 
   /// Gera o template do repository da feature
   static String repository(String featureNamePascal, String featureNameSnake) {
-    return '''import 'package:engine/engine.dart';
+    return '''import 'package:engine/lib.dart';
 
 abstract class I${featureNamePascal}Repository {
   Future<EngineResult<String, dynamic>> getData();
@@ -227,7 +227,7 @@ class ${featureNamePascal}Keys {
   static String routes(String featureName, String featureNameSnake) {
     final featureNamePascal = ReCase(featureName).pascalCase;
 
-    return '''import 'package:engine/engine.dart';
+    return '''import 'package:engine/lib.dart';
 import '../presentations/pages/${featureNameSnake}_page.dart';
 import '../bindings/${featureNameSnake}_binding.dart';
 
@@ -246,8 +246,7 @@ class ${featureNamePascal}Routes {
 
   /// Gera o template do arquivo de rotas para módulos
   static String moduleRoutesTemplate(String moduleNamePascal, String moduleNameSnake) {
-    return '''import 'package:engine/engine.dart';
-    import 'package:get/get.dart';
+    return '''import 'package:engine/lib.dart';
 
     import 'presentations/pages/${moduleNameSnake}_page.dart';
     import '${moduleNameSnake}_bindings.dart';
@@ -267,8 +266,7 @@ class ${featureNamePascal}Routes {
 
   /// Gera o template do arquivo de bindings
   static String bindings(String moduleNamePascal, String moduleNameSnake) {
-    return '''import 'package:engine/engine.dart';
-    import 'package:get/get.dart';
+    return '''import 'package:engine/lib.dart';
 
     import 'presentations/controllers/${moduleNameSnake}_controller.dart';
 
