@@ -8,7 +8,7 @@ import 'package:recase/recase.dart';
 import 'package:stmr_cli/lib.dart';
 
 /// Comando responsável por gerar diversos elementos como pages, controllers, repositories e DTOs
-class GenerateCommand implements Command {
+class GenerateCommand implements ICommand {
   /// Construtor que recebe o logger para output
   GenerateCommand(this._logger);
 

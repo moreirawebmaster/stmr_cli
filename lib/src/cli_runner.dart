@@ -16,7 +16,7 @@ class CliRunner {
         ..addFlag('help', abbr: 'h', help: 'Mostra informações de ajuda')
         ..addFlag('version', abbr: 'v', help: 'Mostra a versão do CLI');
 
-      final commands = <String, Command>{
+      final commands = <String, ICommand>{
         'create': CreateCommand(_logger),
         'feature': FeatureCommand(_logger),
         'generate': GenerateCommand(_logger),

@@ -7,7 +7,7 @@ import 'package:recase/recase.dart';
 import 'package:stmr_cli/lib.dart';
 
 /// Comando responsável por criar um novo módulo no projeto
-class FeatureCommand implements Command {
+class FeatureCommand implements ICommand {
   /// Construtor que recebe o logger para output
   FeatureCommand(this._logger);
 

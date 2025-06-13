@@ -2,11 +2,10 @@ import 'dart:io';
 
 import 'package:args/args.dart';
 import 'package:mason_logger/mason_logger.dart';
-import 'package:path/path.dart' as path;
 import 'package:stmr_cli/lib.dart';
 
 /// Comando responsável por criar um novo projeto Flutter
-class CreateCommand implements Command {
+class CreateCommand implements ICommand {
   /// Construtor que recebe o logger para output
   CreateCommand(this._logger);
 
@@ -16,59 +15,245 @@ class CreateCommand implements Command {
   ArgParser build() {
     return ArgParser()
       ..addFlag('help', abbr: 'h', help: 'Mostra informações de ajuda')
-      ..addFlag('version', abbr: 'v', help: 'Mostra a versão do CLI');
+      ..addFlag('version', abbr: 'v', help: 'Mostra a versão do CLI')
+      ..addOption('name', help: 'Nome do projeto (substitui "skeleton" nos arquivos)')
+      ..addOption('org', help: 'Organização do projeto (substitui "tech.stmr" nos arquivos)', defaultsTo: 'tech.stmr');
   }
 
   @override
   Future<void> run(ArgResults command) async {
-    final args = command.arguments;
+    // Verificar se é pedido de ajuda
+    if (command['help'] as bool) {
+      _logger.info('Uso: stmr create <nome_do_projeto> [--name nome] [--org organizacao]');
+      _logger.info('');
+      _logger.info('Argumentos:');
+      _logger.info('  <nome_do_projeto>  Nome do diretório do projeto');
+      _logger.info('');
+      _logger.info('Opções:');
+      _logger.info('  --name             Nome do projeto (substitui "skeleton" nos arquivos)');
+      _logger.info('  --org              Organização (substitui "tech.stmr") [padrão: tech.stmr]');
+      _logger.info('  -h, --help         Mostra esta ajuda');
+      _logger.info('');
+      _logger.info('Exemplos:');
+      _logger.info('  stmr create meu_app');
+      _logger.info('  stmr create meu_app --name "Meu App" --org com.minhaempresa');
+      return;
+    }
 
-    if (args.isEmpty) {
+    final args = command.rest;
+    final projectName = command['name'] as String?;
+    final organization = command['org'] as String? ?? 'tech.stmr';
+
+    // Determinar o nome do projeto
+    String finalProjectName;
+    String projectDir;
+
+    if (args.isNotEmpty) {
+      projectDir = args.first;
+      finalProjectName = projectName ?? args.first;
+    } else {
       _logger.err('❌ Nome do projeto é obrigatório');
-      _logger.info('Uso: stmr create <nome_do_projeto>');
+      _logger.info('Uso: stmr create <nome_do_projeto> [--name nome] [--org organizacao]');
+      _logger.info('Exemplo: stmr create meu_app --name "Meu App" --org com.minhaempresa');
       return;
     }
 
-    final projectName = args.first;
-    final projectNameSnake = projectName.toLowerCase().replaceAll(' ', '_');
+    final projectNameSnake = finalProjectName.toLowerCase().replaceAll(' ', '_').replaceAll('-', '_');
 
-    if (Directory(projectNameSnake).existsSync()) {
-      _logger.err('❌ Diretório já existe: $projectNameSnake');
+    if (Directory(projectDir).existsSync()) {
+      _logger.err('❌ Diretório já existe: $projectDir');
       return;
     }
 
-    _logger.info('🚀 Criando projeto $projectName...');
+    _logger.info('🚀 Criando projeto $finalProjectName...');
+    _logger.info('📁 Diretório: $projectDir');
+    _logger.info('🏢 Organização: $organization');
 
     try {
-      // Criar diretório do projeto
-      await Directory(projectNameSnake).create();
+      // Clonar o skeleton do GitHub
+      await _cloneSkeleton(projectDir);
 
-      // Criar arquivo pubspec.yaml
-      await _createFile(
-        path.join(projectNameSnake, 'pubspec.yaml'),
-        CreateTemplates.pubspec(projectName, projectNameSnake),
-      );
+      // Fazer as substituições necessárias
+      await _replaceProjectValues(projectDir, finalProjectName, projectNameSnake, organization);
 
-      // Criar diretório lib
-      await Directory(path.join(projectNameSnake, 'lib')).create();
+      // Limpar arquivos desnecessários
+      await _cleanupProject(projectDir);
 
-      // Criar arquivo main.dart
-      await _createFile(
-        path.join(projectNameSnake, 'lib', 'main.dart'),
-        CreateTemplates.main(projectName),
-      );
-
-      // Criar diretório de módulos
-      await Directory(path.join(projectNameSnake, 'lib', 'modules')).create();
-
-      _logger.success('✅ Projeto $projectName criado com sucesso!');
+      _logger.success('✅ Projeto $finalProjectName criado com sucesso!');
       _logger.info('');
       _logger.info('Próximos passos:');
-      _logger.info('  1. cd $projectNameSnake');
+      _logger.info('  1. cd $projectDir');
       _logger.info('  2. flutter pub get');
       _logger.info('  3. stmr feature <nome_do_modulo>');
     } catch (e) {
       _logger.err('❌ Erro ao criar projeto: $e');
+
+      // Limpar diretório em caso de erro
+      if (Directory(projectDir).existsSync()) {
+        try {
+          await Directory(projectDir).delete(recursive: true);
+          _logger.info('🧹 Diretório limpo após erro');
+        } catch (cleanupError) {
+          _logger.warn('⚠️  Não foi possível limpar o diretório: $cleanupError');
+        }
+      }
+    }
+  }
+
+  /// Clona o skeleton do GitHub
+  Future<void> _cloneSkeleton(String projectDir) async {
+    _logger.info('📥 Clonando skeleton do GitHub...');
+
+    final result = await Process.run(
+      'git',
+      ['clone', 'https://github.com/moreirawebmaster/skeleton.git', projectDir],
+    );
+
+    if (result.exitCode != 0) {
+      throw Exception('Erro ao clonar skeleton: ${result.stderr}');
+    }
+
+    _logger.success('✅ Skeleton clonado com sucesso!');
+  }
+
+  /// Substitui os valores do projeto nos arquivos
+  Future<void> _replaceProjectValues(
+    String projectDir,
+    String projectName,
+    String projectNameSnake,
+    String organization,
+  ) async {
+    _logger.info('🔄 Substituindo valores do projeto...');
+
+    // Lista de arquivos para processar
+    final filesToProcess = [
+      'pubspec.yaml',
+      'lib/main.dart',
+      'android/app/build.gradle',
+      'android/app/build.gradle.kts',
+      'android/app/src/main/AndroidManifest.xml',
+      'ios/Runner/Info.plist',
+      'ios/Runner.xcodeproj/project.pbxproj',
+    ];
+
+    // Processar arquivos Kotlin dinamicamente
+    await _processKotlinFiles(projectDir, organization);
+
+    for (final filePath in filesToProcess) {
+      final file = File('$projectDir/$filePath');
+      if (file.existsSync()) {
+        try {
+          String content = await file.readAsString();
+
+          // Substituir "skeleton" pelo nome do projeto
+          content = content.replaceAll('skeleton', projectNameSnake);
+          content = content.replaceAll('Skeleton', projectName);
+          content = content.replaceAll('SKELETON', projectName.toUpperCase());
+
+          // Substituir organização
+          content = content.replaceAll('tech.stmr', organization);
+
+          await file.writeAsString(content);
+          _logger.info('  ✅ $filePath atualizado');
+        } catch (e) {
+          _logger.warn('  ⚠️  Erro ao processar $filePath: $e');
+        }
+      }
+    }
+
+    _logger.success('✅ Substituições concluídas!');
+  }
+
+  /// Limpa arquivos desnecessários do projeto
+  Future<void> _cleanupProject(String projectDir) async {
+    _logger.info('🧹 Limpando arquivos desnecessários...');
+
+    // Remover diretório .git
+    final gitDir = Directory('$projectDir/.git');
+    if (gitDir.existsSync()) {
+      await gitDir.delete(recursive: true);
+      _logger.info('  ✅ Diretório .git removido');
+    }
+
+    // Remover arquivos desnecessários
+    final filesToRemove = [
+      'README.md',
+      '.gitignore.bak',
+    ];
+
+    for (final fileName in filesToRemove) {
+      final file = File('$projectDir/$fileName');
+      if (file.existsSync()) {
+        await file.delete();
+        _logger.info('  ✅ $fileName removido');
+      }
+    }
+
+    _logger.success('✅ Limpeza concluída!');
+  }
+
+  /// Processa arquivos Kotlin e move diretórios conforme a nova organização
+  Future<void> _processKotlinFiles(String projectDir, String organization) async {
+    final kotlinDir = Directory('$projectDir/android/app/src/main/kotlin');
+    if (!kotlinDir.existsSync()) return;
+
+    // Encontrar arquivos Kotlin recursivamente
+    await for (final entity in kotlinDir.list(recursive: true)) {
+      if (entity is File && entity.path.endsWith('.kt')) {
+        try {
+          String content = await entity.readAsString();
+
+          // Substituir package
+          content = content.replaceAll('tech.stmr.skeleton', '$organization.${projectDir.toLowerCase()}');
+          content = content.replaceAll('tech.stmr', organization);
+
+          await entity.writeAsString(content);
+          _logger.info('  ✅ ${entity.path.split('/').last} atualizado');
+        } catch (e) {
+          _logger.warn('  ⚠️  Erro ao processar ${entity.path}: $e');
+        }
+      }
+    }
+
+    // Reorganizar estrutura de diretórios Kotlin se necessário
+    if (organization != 'tech.stmr') {
+      await _reorganizeKotlinDirectories(projectDir, organization);
+    }
+  }
+
+  /// Reorganiza os diretórios Kotlin conforme a nova organização
+  Future<void> _reorganizeKotlinDirectories(String projectDir, String organization) async {
+    final oldKotlinPath = '$projectDir/android/app/src/main/kotlin/tech/stmr/skeleton';
+    final oldDir = Directory(oldKotlinPath);
+
+    if (!oldDir.existsSync()) return;
+
+    // Criar nova estrutura de diretórios
+    final orgParts = organization.split('.');
+    final newKotlinPath = '$projectDir/android/app/src/main/kotlin/${orgParts.join('/')}/${projectDir.toLowerCase()}';
+    final newDir = Directory(newKotlinPath);
+
+    try {
+      await newDir.create(recursive: true);
+
+      // Mover arquivos
+      await for (final entity in oldDir.list()) {
+        if (entity is File) {
+          final newFilePath = '${newDir.path}/${entity.path.split('/').last}';
+          await entity.copy(newFilePath);
+          await entity.delete();
+          _logger.info('  ✅ ${entity.path.split('/').last} movido para nova estrutura');
+        }
+      }
+
+      // Remover diretório antigo
+      final techDir = Directory('$projectDir/android/app/src/main/kotlin/tech');
+      if (techDir.existsSync()) {
+        await techDir.delete(recursive: true);
+        _logger.info('  ✅ Estrutura antiga removida');
+      }
+    } catch (e) {
+      _logger.warn('  ⚠️  Erro ao reorganizar diretórios Kotlin: $e');
     }
   }
 
