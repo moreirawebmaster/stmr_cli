@@ -1,81 +1,71 @@
-import 'dart:io';
-
 import 'package:args/args.dart';
 import 'package:mason_logger/mason_logger.dart';
+import 'package:stmr_cli/lib.dart';
 
-import 'commands/commands.dart';
+/// Runner principal do CLI
+class CliRunner {
+  /// Construtor que recebe o logger para output
+  CliRunner(this._logger);
 
-/// Classe principal que executa os comandos do CLI
-class StmrCliRunner {
-  final Logger _logger = Logger();
+  final Logger _logger;
 
   /// Executa o CLI com os argumentos fornecidos
-  Future<void> run(List<String> arguments) async {
-    final parser = ArgParser()
-      ..addCommand('create')
-      ..addCommand('feature')
-      ..addFlag('help', abbr: 'h', help: 'Mostra informações de ajuda')
-      ..addFlag('version', abbr: 'v', help: 'Mostra a versão do CLI');
-
+  Future<void> run(List<String> args) async {
     try {
-      final results = parser.parse(arguments);
+      final parser = ArgParser()
+        ..addFlag('help', abbr: 'h', help: 'Mostra informações de ajuda')
+        ..addFlag('version', abbr: 'v', help: 'Mostra a versão do CLI');
+
+      final commands = <String, Command>{
+        'create': CreateCommand(_logger),
+        'feature': FeatureCommand(_logger),
+        'generate': GenerateCommand(_logger),
+        'upgrade': UpgradeCommand(_logger),
+      };
+
+      for (final command in commands.entries) {
+        parser.addCommand(command.key, command.value.build());
+      }
+
+      ArgResults results;
+      try {
+        results = parser.parse(args);
+      } on ArgParserException catch (e) {
+        _logger.err(e.message);
+        _logger.info('\nComandos disponíveis:');
+        for (final command in commands.keys) {
+          _logger.info('  stmr $command');
+        }
+        return;
+      }
 
       if (results['help'] as bool) {
-        _showHelp(parser);
+        _logger.info(parser.usage);
         return;
       }
 
       if (results['version'] as bool) {
-        _showVersion();
+        _logger.info('1.0.0');
         return;
       }
 
-      final command = results.command;
+      if (results.command == null) {
+        _logger.info('Comandos disponíveis:');
+        for (final command in commands.keys) {
+          _logger.info('  stmr $command');
+        }
+        return;
+      }
+
+      final command = commands[results.command!.name];
       if (command == null) {
-        _showHelp(parser);
+        _logger.err('Comando não encontrado: ${results.command!.name}');
         return;
       }
 
-      switch (command.name) {
-        case 'create':
-          await CreateCommand(_logger).run(command);
-          break;
-        case 'feature':
-          await FeatureCommand(_logger).run(command);
-          break;
-        default:
-          _logger.err('Comando desconhecido: ${command.name}');
-          _showHelp(parser);
-      }
+      await command.run(results.command!);
     } catch (e) {
-      _logger.err('Erro: $e');
-      exit(1);
+      _logger.err('Erro ao executar comando: $e');
     }
-  }
-
-  void _showHelp(ArgParser parser) {
-    _logger.info('''
-🚀 STMR CLI - Official CLI for STMR Flutter projects
-
-Uso: stmr <comando> [argumentos]
-
-Comandos disponíveis:
-  create project <nome>     Cria um novo projeto Flutter baseado no skeleton STMR
-  feature <nome>            Cria uma nova feature com estrutura completa
-
-Opções:
-${parser.usage}
-
-Exemplos:
-  stmr create project meu_app
-  stmr feature login
-  stmr feature dashboard
-
-Para mais informações, visite: https://github.com/moreirawebmaster/stmr_cli
-    ''');
-  }
-
-  void _showVersion() {
-    _logger.info('STMR CLI versão 1.0.0');
   }
 }

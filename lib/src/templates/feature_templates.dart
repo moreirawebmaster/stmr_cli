@@ -243,4 +243,59 @@ class ${featureNamePascal}Routes {
   ];
 }''';
   }
+
+  /// Gera o template do arquivo de rotas para módulos
+  static String moduleRoutesTemplate(String moduleNamePascal, String moduleNameSnake) {
+    return '''import 'package:engine/engine.dart';
+    import 'package:get/get.dart';
+
+    import 'presentations/pages/${moduleNameSnake}_page.dart';
+    import '${moduleNameSnake}_bindings.dart';
+
+    /// Rotas do módulo $moduleNamePascal
+    class ${moduleNamePascal}Routes {
+      /// Lista de rotas do módulo
+      static final routes = [
+        GetPage(
+          name: '/$moduleNameSnake',
+          page: () => const ${moduleNamePascal}Page(),
+          binding: ${moduleNamePascal}Bindings(),
+        ),
+      ];
+    }''';
+  }
+
+  /// Gera o template do arquivo de bindings
+  static String bindings(String moduleNamePascal, String moduleNameSnake) {
+    return '''import 'package:engine/engine.dart';
+    import 'package:get/get.dart';
+
+    import 'presentations/controllers/${moduleNameSnake}_controller.dart';
+
+    /// Bindings do módulo $moduleNamePascal
+    class ${moduleNamePascal}Bindings extends Bindings {
+      @override
+      void dependencies() {
+        Get.lazyPut<${moduleNamePascal}Controller>(
+          () => ${moduleNamePascal}Controller(),
+        );
+      }
+    }''';
+  }
+
+  /// Gera o template do arquivo de constantes
+  static String constants(String moduleNamePascal) {
+    return '''/// Constantes do módulo $moduleNamePascal
+    class ${moduleNamePascal}Constants {
+      /// Construtor privado
+      const ${moduleNamePascal}Constants._();
+
+      /// Chaves de armazenamento
+      static const String storageKey = '${moduleNamePascal.toLowerCase()}_storage';
+
+      /// Mensagens
+      static const String errorMessage = 'Erro ao carregar dados';
+      static const String successMessage = 'Operação realizada com sucesso';
+    }''';
+  }
 }

@@ -3,170 +3,77 @@ import 'dart:io';
 import 'package:args/args.dart';
 import 'package:mason_logger/mason_logger.dart';
 import 'package:path/path.dart' as path;
-import 'package:recase/recase.dart';
+import 'package:stmr_cli/lib.dart';
 
-import '../utils/utils.dart';
-
-/// Comando responsável por criar novos projetos e recursos
-class CreateCommand {
+/// Comando responsável por criar um novo projeto Flutter
+class CreateCommand implements Command {
   /// Construtor que recebe o logger para output
   CreateCommand(this._logger);
 
   final Logger _logger;
 
-  /// Executa o comando de criação
-  Future<void> run(ArgResults command) async {
-    final subcommands = command.arguments;
-
-    if (subcommands.isEmpty) {
-      _logger.err('Especifique o que deseja criar: project');
-      return;
-    }
-
-    switch (subcommands.first) {
-      case 'project':
-        await _createProject(subcommands.skip(1).toList());
-        break;
-      default:
-        _logger.err('Subcomando desconhecido: ${subcommands.first}');
-    }
+  @override
+  ArgParser build() {
+    return ArgParser()
+      ..addFlag('help', abbr: 'h', help: 'Mostra informações de ajuda')
+      ..addFlag('version', abbr: 'v', help: 'Mostra a versão do CLI');
   }
 
-  Future<void> _createProject(List<String> args) async {
+  @override
+  Future<void> run(ArgResults command) async {
+    final args = command.arguments;
+
     if (args.isEmpty) {
-      _logger.err('Nome do projeto é obrigatório');
-      _logger.info('Uso: stmr create project <nome_do_projeto>');
+      _logger.err('❌ Nome do projeto é obrigatório');
+      _logger.info('Uso: stmr create <nome_do_projeto>');
       return;
     }
 
     final projectName = args.first;
-    final projectNameSnake = ReCase(projectName).snakeCase;
-    final currentDir = Directory.current.path;
-    final projectPath = path.join(currentDir, projectNameSnake);
+    final projectNameSnake = projectName.toLowerCase().replaceAll(' ', '_');
 
-    // Verificar se já existe
-    if (Directory(projectPath).existsSync()) {
-      _logger.err('Diretório já existe: $projectNameSnake');
+    if (Directory(projectNameSnake).existsSync()) {
+      _logger.err('❌ Diretório já existe: $projectNameSnake');
       return;
     }
 
     _logger.info('🚀 Criando projeto $projectName...');
 
     try {
-      // Clone do skeleton
-      _logger.info('📥 Clonando template do skeleton...');
-      await _cloneSkeleton(projectPath);
+      // Criar diretório do projeto
+      await Directory(projectNameSnake).create();
 
-      // Substituir nomes no projeto
-      _logger.info('🔄 Configurando projeto...');
-      await _configureProject(projectPath, projectName);
+      // Criar arquivo pubspec.yaml
+      await _createFile(
+        path.join(projectNameSnake, 'pubspec.yaml'),
+        CreateTemplates.pubspec(projectName, projectNameSnake),
+      );
 
-      // Instalar dependências
-      _logger.info('📦 Instalando dependências...');
-      await _installDependencies(projectPath);
+      // Criar diretório lib
+      await Directory(path.join(projectNameSnake, 'lib')).create();
+
+      // Criar arquivo main.dart
+      await _createFile(
+        path.join(projectNameSnake, 'lib', 'main.dart'),
+        CreateTemplates.main(projectName),
+      );
+
+      // Criar diretório de módulos
+      await Directory(path.join(projectNameSnake, 'lib', 'modules')).create();
 
       _logger.success('✅ Projeto $projectName criado com sucesso!');
       _logger.info('');
-      _logger.info('Para executar o projeto:');
-      _logger.info('  cd $projectNameSnake');
-      _logger.info('  flutter run');
+      _logger.info('Próximos passos:');
+      _logger.info('  1. cd $projectNameSnake');
+      _logger.info('  2. flutter pub get');
+      _logger.info('  3. stmr feature <nome_do_modulo>');
     } catch (e) {
       _logger.err('❌ Erro ao criar projeto: $e');
-
-      // Limpar diretório em caso de erro
-      if (Directory(projectPath).existsSync()) {
-        await Directory(projectPath).delete(recursive: true);
-      }
     }
   }
 
-  Future<void> _cloneSkeleton(String projectPath) async {
-    final result = await Process.run(
-      'git',
-      ['clone', 'https://github.com/moreirawebmaster/skeleton.git', projectPath],
-    );
-
-    if (result.exitCode != 0) {
-      throw Exception('Falha ao clonar o skeleton: ${result.stderr}');
-    }
-
-    // Remover .git
-    final gitDir = Directory(path.join(projectPath, '.git'));
-    if (gitDir.existsSync()) {
-      await gitDir.delete(recursive: true);
-    }
-  }
-
-  Future<void> _configureProject(String projectPath, String projectName) async {
-    final projectNameSnake = ReCase(projectName).snakeCase;
-    final projectNamePascal = ReCase(projectName).pascalCase;
-
-    // Lista de arquivos para processar
-    final filesToProcess = [
-      'pubspec.yaml',
-      'lib/main.dart',
-      'lib/main_dev.dart',
-      'lib/main_prod.dart',
-      'android/app/build.gradle',
-      'android/app/src/main/AndroidManifest.xml',
-      'ios/Runner/Info.plist',
-      'README.md',
-    ];
-
-    for (final filePath in filesToProcess) {
-      final file = File(path.join(projectPath, filePath));
-      if (file.existsSync()) {
-        await FileUtils.replaceInFile(file, [
-          StringReplacement('skeleton', projectNameSnake),
-          StringReplacement('Skeleton', projectNamePascal),
-          StringReplacement('tech.stmr', 'com.$projectNameSnake'),
-        ]);
-      }
-    }
-
-    // Renomear pasta android se necessário
-    await _renameAndroidPackage(projectPath, projectNameSnake);
-  }
-
-  Future<void> _renameAndroidPackage(String projectPath, String projectName) async {
-    final androidMainPath = path.join(projectPath, 'android', 'app', 'src', 'main', 'java');
-    final techDir = Directory(path.join(androidMainPath, 'tech'));
-
-    if (techDir.existsSync()) {
-      final newPackagePath = path.join(androidMainPath, 'com', projectName);
-      await Directory(newPackagePath).create(recursive: true);
-
-      // Mover arquivos
-      final stmrDir = Directory(path.join(techDir.path, 'stmr'));
-      if (stmrDir.existsSync()) {
-        await for (final entity in stmrDir.list()) {
-          if (entity is File) {
-            final newPath = path.join(newPackagePath, path.basename(entity.path));
-            await entity.copy(newPath);
-
-            // Atualizar package declaration
-            final newFile = File(newPath);
-            await FileUtils.replaceInFile(newFile, [
-              StringReplacement('package tech.stmr', 'package com.$projectName'),
-            ]);
-          }
-        }
-      }
-
-      // Remover diretório antigo
-      await techDir.delete(recursive: true);
-    }
-  }
-
-  Future<void> _installDependencies(String projectPath) async {
-    final result = await Process.run(
-      'flutter',
-      ['pub', 'get'],
-      workingDirectory: projectPath,
-    );
-
-    if (result.exitCode != 0) {
-      throw Exception('Falha ao instalar dependências Flutter: ${result.stderr}');
-    }
+  Future<void> _createFile(String path, String content) async {
+    final file = File(path);
+    await file.writeAsString(content);
   }
 }

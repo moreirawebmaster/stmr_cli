@@ -4,186 +4,115 @@ import 'package:args/args.dart';
 import 'package:mason_logger/mason_logger.dart';
 import 'package:path/path.dart' as path;
 import 'package:recase/recase.dart';
+import 'package:stmr_cli/lib.dart';
 
-import '../templates/templates.dart';
-
-/// Comando responsável por criar features no padrão clean architecture
-class FeatureCommand {
+/// Comando responsável por criar um novo módulo no projeto
+class FeatureCommand implements Command {
   /// Construtor que recebe o logger para output
   FeatureCommand(this._logger);
 
   final Logger _logger;
 
-  /// Executa o comando de criação de feature
+  @override
+  ArgParser build() {
+    return ArgParser()
+      ..addFlag('help', abbr: 'h', help: 'Mostra informações de ajuda')
+      ..addFlag('version', abbr: 'v', help: 'Mostra a versão do CLI');
+  }
+
+  @override
   Future<void> run(ArgResults command) async {
     final args = command.arguments;
 
     if (args.isEmpty) {
-      _logger.err('Nome da feature é obrigatório');
-      _logger.info('Uso: stmr feature <nome_da_feature>');
+      _logger.err('❌ Nome do módulo é obrigatório');
+      _logger.info('Uso: stmr feature <nome_do_modulo>');
       return;
     }
 
-    final featureName = args.first;
-    await _createFeature(featureName);
-  }
-
-  Future<void> _createFeature(String featureName) async {
-    final featureNameSnake = ReCase(featureName).snakeCase;
-    final featureNamePascal = ReCase(featureName).pascalCase;
-    final featureNameCamel = ReCase(featureName).camelCase;
-
-    final currentDir = Directory.current.path;
+    final moduleName = args.first;
+    final moduleNamePascal = ReCase(moduleName).pascalCase;
+    final moduleNameSnake = ReCase(moduleName).snakeCase;
 
     // Verificar se estamos em um projeto Flutter
-    if (!File(path.join(currentDir, 'pubspec.yaml')).existsSync()) {
-      _logger.err('❌ Este comando deve ser executado na raiz de um projeto Flutter');
+    if (!await _isFlutterProject()) {
       return;
     }
 
-    final featurePath = path.join(currentDir, 'lib', 'modules', featureNameSnake);
+    final modulePath = path.join('lib', 'modules', moduleNameSnake);
 
-    // Verificar se feature já existe
-    if (Directory(featurePath).existsSync()) {
-      _logger.err('❌ Feature já existe: $featureNameSnake');
+    if (Directory(modulePath).existsSync()) {
+      _logger.err('❌ Módulo já existe: $moduleNameSnake');
       return;
     }
 
-    _logger.info('🚀 Criando feature $featureName...');
+    _logger.info('🚀 Criando módulo $moduleNamePascal...');
 
     try {
-      // Criar estrutura de pastas
-      await _createFeatureStructure(featurePath);
+      // Criar estrutura de diretórios
+      await _createDirectoryStructure(modulePath);
 
-      // Criar arquivos da feature
-      await _createFeatureFiles(featurePath, featureName, featureNameSnake, featureNamePascal, featureNameCamel);
+      // Criar arquivos do módulo
+      await _createModuleFiles(modulePath, moduleNamePascal, moduleNameSnake);
 
-      // Registrar rotas
-      await _registerRoutes(currentDir, featureName, featureNameSnake);
-
-      _logger.success('✅ Feature $featureName criada com sucesso!');
+      _logger.success('✅ Módulo $moduleNamePascal criado com sucesso!');
       _logger.info('');
-      _logger.info('Arquivos criados:');
-      _logger.info('  📁 lib/modules/$featureNameSnake/');
-      _logger.info('  📄 Binding, Controller, Pages, UseCase, Repository');
-      _logger.info('  🛣️  Rotas registradas automaticamente');
+      _logger.info('Próximos passos:');
+      _logger.info('  1. Adicione o módulo ao roteamento');
+      _logger.info('  2. stmr generate page <nome_da_page>');
     } catch (e) {
-      _logger.err('❌ Erro ao criar feature: $e');
-
-      // Limpar em caso de erro
-      if (Directory(featurePath).existsSync()) {
-        await Directory(featurePath).delete(recursive: true);
-      }
+      _logger.err('❌ Erro ao criar módulo: $e');
     }
   }
 
-  Future<void> _createFeatureStructure(String featurePath) async {
+  Future<void> _createDirectoryStructure(String modulePath) async {
     final directories = [
-      'bindings',
-      'models',
-      'presentations/controllers',
-      'presentations/pages',
-      'presentations/components',
-      'use_cases',
-      'repositories/dtos/requests',
-      'repositories/dtos/responses',
-      'keys',
+      path.join(modulePath, 'presentations', 'pages'),
+      path.join(modulePath, 'presentations', 'controllers'),
+      path.join(modulePath, 'repositories', 'dtos', 'requests'),
+      path.join(modulePath, 'repositories', 'dtos', 'responses'),
     ];
 
     for (final dir in directories) {
-      await Directory(path.join(featurePath, dir)).create(recursive: true);
+      await Directory(dir).create(recursive: true);
     }
   }
 
-  Future<void> _createFeatureFiles(
-    String featurePath,
-    String featureName,
-    String featureNameSnake,
-    String featureNamePascal,
-    String featureNameCamel,
+  Future<void> _createModuleFiles(
+    String modulePath,
+    String moduleNamePascal,
+    String moduleNameSnake,
   ) async {
-    // Binding
+    // Criar arquivo de rotas
     await _createFile(
-      path.join(featurePath, 'bindings', '${featureNameSnake}_binding.dart'),
-      FeatureTemplates.binding(featureNamePascal, featureNameSnake),
+      path.join(modulePath, '${moduleNameSnake}_routes.dart'),
+      FeatureTemplates.routes(moduleNamePascal, moduleNameSnake),
     );
 
-    // Model
+    // Criar arquivo de bindings
     await _createFile(
-      path.join(featurePath, 'models', '${featureNameSnake}_model.dart'),
-      FeatureTemplates.model(featureNamePascal, featureNameSnake),
+      path.join(modulePath, '${moduleNameSnake}_bindings.dart'),
+      FeatureTemplates.bindings(moduleNamePascal, moduleNameSnake),
     );
 
-    // Controller
+    // Criar arquivo de constantes
     await _createFile(
-      path.join(featurePath, 'presentations', 'controllers', '${featureNameSnake}_controller.dart'),
-      FeatureTemplates.controller(featureNamePascal, featureNameSnake),
-    );
-
-    // Page
-    await _createFile(
-      path.join(featurePath, 'presentations', 'pages', '${featureNameSnake}_page.dart'),
-      FeatureTemplates.page(featureNamePascal, featureNameSnake),
-    );
-
-    // UseCase
-    await _createFile(
-      path.join(featurePath, 'use_cases', '${featureNameSnake}_use_case.dart'),
-      FeatureTemplates.useCase(featureNamePascal, featureNameSnake),
-    );
-
-    // Repository
-    await _createFile(
-      path.join(featurePath, 'repositories', '${featureNameSnake}_repository.dart'),
-      FeatureTemplates.repository(featureNamePascal, featureNameSnake),
-    );
-
-    // Keys
-    await _createFile(
-      path.join(featurePath, 'keys', '${featureNameSnake}_keys.dart'),
-      FeatureTemplates.keys(featureNamePascal, featureNameSnake),
+      path.join(modulePath, '${moduleNameSnake}_constants.dart'),
+      FeatureTemplates.constants(moduleNamePascal),
     );
   }
 
-  Future<void> _createFile(String filePath, String content) async {
-    final file = File(filePath);
+  Future<bool> _isFlutterProject() async {
+    if (!File('pubspec.yaml').existsSync()) {
+      _logger.err('❌ Não é um projeto Flutter');
+      _logger.info('Execute este comando dentro de um projeto Flutter');
+      return false;
+    }
+    return true;
+  }
+
+  Future<void> _createFile(String path, String content) async {
+    final file = File(path);
     await file.writeAsString(content);
-  }
-
-  Future<void> _registerRoutes(String projectPath, String featureName, String featureNameSnake) async {
-    final routesPath = path.join(projectPath, 'lib', 'routes');
-    final featureRoutesFile = File(path.join(routesPath, '${featureNameSnake}_routes.dart'));
-    final appRoutesFile = File(path.join(routesPath, 'app_routes.dart'));
-
-    // Criar arquivo de rotas da feature
-    await featureRoutesFile.writeAsString(FeatureTemplates.routes(featureName, featureNameSnake));
-
-    // Adicionar import e rota no app_routes.dart
-    if (appRoutesFile.existsSync()) {
-      await _updateAppRoutes(appRoutesFile, featureName, featureNameSnake);
-    }
-  }
-
-  Future<void> _updateAppRoutes(File appRoutesFile, String featureName, String featureNameSnake) async {
-    final content = await appRoutesFile.readAsString();
-
-    // Adicionar import se não existir
-    final importLine = "import '${featureNameSnake}_routes.dart';";
-    if (!content.contains(importLine)) {
-      final lines = content.split('\n');
-      final lastImportIndex = lines.lastIndexWhere((line) => line.startsWith('import'));
-      if (lastImportIndex != -1) {
-        lines.insert(lastImportIndex + 1, importLine);
-      }
-
-      // Adicionar rotas na lista
-      final routesPattern = RegExp(r'static final routes = \[(.*?)\];', dotAll: true);
-      final newContent = lines.join('\n').replaceFirstMapped(routesPattern, (match) {
-        final routesContent = match.group(1)!;
-        return 'static final routes = [$routesContent\n    ...${ReCase(featureName).pascalCase}Routes.routes,\n  ];';
-      });
-
-      await appRoutesFile.writeAsString(newContent);
-    }
   }
 }
