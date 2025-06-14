@@ -139,6 +139,9 @@ class CreateCommand implements ICommand {
     // Processar arquivos Kotlin dinamicamente
     await _processKotlinFiles(projectDir, organization);
 
+    // Processar todos os arquivos Dart recursivamente
+    await _processDartFiles(projectDir, projectNameSnake, projectName);
+
     for (final filePath in filesToProcess) {
       final file = File('$projectDir/$filePath');
       if (file.existsSync()) {
@@ -190,6 +193,68 @@ class CreateCommand implements ICommand {
     }
 
     _logger.success('✅ Limpeza concluída!');
+  }
+
+  /// Processa todos os arquivos Dart recursivamente substituindo imports e referências
+  Future<void> _processDartFiles(String projectDir, String projectNameSnake, String projectName) async {
+    _logger.info('🔄 Processando arquivos Dart...');
+
+    final libDir = Directory('$projectDir/lib');
+    final testDir = Directory('$projectDir/test');
+    final integrationTestDir = Directory('$projectDir/integration_test');
+
+    // Processar diretórios se existirem
+    for (final dir in [libDir, testDir, integrationTestDir]) {
+      if (dir.existsSync()) {
+        await _processDartFilesInDirectory(dir, projectNameSnake, projectName);
+      }
+    }
+
+    _logger.success('✅ Arquivos Dart processados!');
+  }
+
+  /// Processa arquivos Dart recursivamente em um diretório
+  Future<void> _processDartFilesInDirectory(Directory dir, String projectNameSnake, String projectName) async {
+    await for (final entity in dir.list(recursive: true)) {
+      if (entity is File && entity.path.endsWith('.dart')) {
+        try {
+          String content = await entity.readAsString();
+          bool changed = false;
+
+          // Substituir imports que usam 'package:skeleton'
+          if (content.contains('package:skeleton')) {
+            content = content.replaceAll('package:skeleton', 'package:$projectNameSnake');
+            changed = true;
+          }
+
+          // Substituir outras referências a 'skeleton' em strings e comentários
+          if (content.contains('skeleton')) {
+            content = content.replaceAll('skeleton', projectNameSnake);
+            changed = true;
+          }
+
+          // Substituir 'Skeleton' (capitalizado)
+          if (content.contains('Skeleton')) {
+            content = content.replaceAll('Skeleton', projectName);
+            changed = true;
+          }
+
+          // Substituir 'SKELETON' (maiúsculo)
+          if (content.contains('SKELETON')) {
+            content = content.replaceAll('SKELETON', projectName.toUpperCase());
+            changed = true;
+          }
+
+          if (changed) {
+            await entity.writeAsString(content);
+            final relativePath = entity.path.replaceFirst('${dir.parent.path}/', '');
+            _logger.info('  ✅ $relativePath atualizado');
+          }
+        } catch (e) {
+          _logger.warn('  ⚠️  Erro ao processar ${entity.path}: $e');
+        }
+      }
+    }
   }
 
   /// Processa arquivos Kotlin e move diretórios conforme a nova organização
