@@ -14,11 +14,18 @@ if [ "$current_branch" = "main" ]; then
   if [ $? -eq 0 ]; then
     echo "✅ Versionamento automático concluído"
     
+    # Pega a nova versão do pubspec.yaml
+    new_version=$(grep "version:" pubspec.yaml | sed 's/version: //')
+    
     # Adiciona os arquivos modificados e amenda ao último commit
     git add pubspec.yaml lib/src/version.dart
     git commit --amend --no-edit
     
-    echo "🚀 Versão adicionada ao último commit, prosseguindo com push..."
+    echo "🚀 Versão $new_version adicionada ao último commit, prosseguindo com push..."
+    
+    # Após o push ser bem-sucedido, executa post-push actions
+    # Nota: Este hook executa ANTES do push, então criaremos um script separado
+    
   else
     echo "❌ Erro no versionamento automático"
     exit 1

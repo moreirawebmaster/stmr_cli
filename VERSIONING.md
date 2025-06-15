@@ -1,6 +1,6 @@
 # 🚀 Sistema de Versionamento Automático
 
-O STMR CLI utiliza **Husky** com hooks separados para **qualidade de código** e **versionamento automático**.
+Este projeto usa **Husky** e **GitHub Actions** para versionamento automático, criação de tags e releases.
 
 ## 🔧 Como Funciona
 
@@ -209,3 +209,123 @@ dart tool/auto_version.dart
 ---
 
 **Sistema perfeito: qualidade no commit, versionamento no push!** 🚀 
+
+## 🏷️ **GitHub Actions Auto-Release**
+
+### **Trigger**: Push na branch `main`
+### **Ações Automáticas**:
+1. Verifica se tag da versão já existe
+2. Cria tag `v{version}` se não existir
+3. Cria GitHub Release com release notes automáticas
+4. Marca como latest release
+
+### 🔧 **Script Manual Post-Push** (Opcional)
+
+### **Comando**: `dart tool/post_push.dart`
+### **Ações**:
+1. **Auto pull**: Mantém código local atualizado
+2. **Criar tag**: Tag local + push para origin
+3. **GitHub Release**: Com release notes automáticas (requer GitHub CLI)
+
+## 🎯 **Opções de Release**
+
+### **Automático (Recomendado)**
+- GitHub Actions detecta push na main
+- Cria tag e release automaticamente
+- Release notes geradas dos commits e PRs
+
+### **Manual (Opcional)**
+```bash
+# Após o push, execute localmente para ações extras:
+dart tool/post_push.dart
+# → Auto pull + Tag local + Release (se GitHub CLI configurado)
+```
+
+## 📋 **Versionamento**
+
+### **Estratégia**
+- **Auto-increment**: Apenas patch version (1.0.0 → 1.0.1)
+- **Manual**: Para major/minor, edite `pubspec.yaml` manualmente
+
+### **Arquivos Sincronizados**
+- `pubspec.yaml` - Versão principal do projeto
+- `lib/src/version.dart` - Versão compilada no código  
+- Git tags - Tags `v{version}` no repositório
+- GitHub Releases - Releases automáticos com release notes
+
+## 🔍 **Verificação**
+
+### **Testar Versão**
+```bash
+# Versão compilada no CLI
+stmr --version
+
+# Versão no pubspec
+grep "version:" pubspec.yaml
+
+# Tags no repositório  
+git tag -l
+
+# Releases no GitHub
+gh release list  # (se GitHub CLI instalado)
+```
+
+### **Status dos Hooks**
+```bash
+# Listar hooks ativos
+ls -la .husky/
+
+# Testar hook pre-commit
+# → Faça um commit com código com lint issues
+
+# Testar hook pre-push  
+# → Faça push na main branch
+```
+
+## 🚨 **Resolução de Problemas**
+
+### **Hook pre-commit falha**
+```bash
+# Corrigir issues automaticamente
+dart fix --apply
+
+# Verificar manualmente
+dart analyze
+```
+
+### **Hook pre-push falha**
+```bash
+# Verificar se tool/auto_version.dart funciona
+dart tool/auto_version.dart
+
+# Verificar permissões
+chmod +x .husky/pre-push
+```
+
+### **GitHub Actions falha**
+- Verificar se repositório tem permissões para criar releases
+- Conferir logs em Actions tab no GitHub
+- Tag pode existir mesmo se release falhou
+
+### **Script post-push falha**
+```bash
+# Verificar GitHub CLI
+gh auth status
+
+# Executar manualmente cada etapa
+git pull origin main
+git tag v1.0.X  
+git push origin v1.0.X
+gh release create v1.0.X --generate-notes
+```
+
+---
+
+## 💡 **Benefícios**
+
+✅ **Automação Completa**: Versão → Tag → Release sem intervenção manual  
+✅ **Qualidade Garantida**: Lint obrigatório antes de commits  
+✅ **Histórico Limpo**: Um commit por funcionalidade + versão  
+✅ **Release Notes**: Geradas automaticamente dos commits/PRs  
+✅ **Fallback**: Script manual disponível se GitHub Actions falhar  
+✅ **Flexibilidade**: Funciona local (Husky) + remoto (GitHub Actions) 
