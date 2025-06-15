@@ -1,1 +1,22 @@
-npm test
+#!/usr/bin/env sh
+
+echo "🔍 Verificando se precisa incrementar versão..."
+
+# Verifica se está na branch main
+current_branch=$(git branch --show-current)
+
+if [ "$current_branch" = "main" ]; then
+  echo "📦 Executando auto-versionamento na branch main..."
+  dart tool/auto_version.dart
+  
+  if [ $? -eq 0 ]; then
+    echo "✅ Versionamento automático concluído"
+    # Adiciona os arquivos modificados ao commit atual
+    git add pubspec.yaml lib/src/version.dart
+  else
+    echo "❌ Erro no versionamento automático"
+    exit 1
+  fi
+else
+  echo "⚠️  Pulando auto-versionamento (não está na branch main)"
+fi

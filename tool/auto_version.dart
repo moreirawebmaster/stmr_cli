@@ -34,30 +34,23 @@ void main(List<String> args) async {
     // Incrementa a versão (patch)
     final newVersion = _incrementVersion(currentVersion);
 
-    // Atualiza o conteúdo do pubspec.yaml
-    final updatedContent = pubspecContent.replaceFirst(
+    // Atualiza o pubspec.yaml
+    final updatedPubspecContent = pubspecContent.replaceFirst(
       RegExp(r'version:\s*' + RegExp.escape(currentVersion)),
       'version: $newVersion',
     );
+    await pubspecFile.writeAsString(updatedPubspecContent);
 
-    // Escreve o arquivo atualizado
-    await pubspecFile.writeAsString(updatedContent);
+    // Atualiza o version.dart
+    final versionFile = File('lib/src/version.dart');
+    final versionContent = '''/// Versão do STMR CLI
+/// Esta versão é sincronizada automaticamente com pubspec.yaml
+const String cliVersion = '$newVersion';''';
+
+    await versionFile.writeAsString(versionContent);
 
     print('🚀 Versão incrementada: $currentVersion → $newVersion');
-
-    // Adiciona o arquivo ao commit
-    await Process.run('git', ['add', 'pubspec.yaml']);
-
-    // Cria commit com a nova versão
-    final commitResult = await Process.run('git', [
-      'commit',
-      '-m',
-      'chore: bump version to $newVersion [skip ci]',
-    ]);
-
-    if (commitResult.exitCode == 0) {
-      print('✅ Commit automático criado com nova versão');
-    }
+    print('📄 Arquivos atualizados: pubspec.yaml, lib/src/version.dart');
   } catch (e) {
     print('❌ Erro ao incrementar versão: $e');
     exit(1);
