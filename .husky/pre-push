@@ -1,0 +1,28 @@
+#!/usr/bin/env sh
+
+echo "🔍 Verificando se precisa incrementar versão antes do push..."
+
+# Verifica se está na branch main
+current_branch=$(git branch --show-current)
+
+if [ "$current_branch" = "main" ]; then
+  echo "📦 Executando auto-versionamento na branch main..."
+  
+  # Executa o bump da versão
+  dart tool/auto_version.dart
+  
+  if [ $? -eq 0 ]; then
+    echo "✅ Versionamento automático concluído"
+    
+    # Adiciona os arquivos modificados e amenda ao último commit
+    git add pubspec.yaml lib/src/version.dart
+    git commit --amend --no-edit
+    
+    echo "🚀 Versão adicionada ao último commit, prosseguindo com push..."
+  else
+    echo "❌ Erro no versionamento automático"
+    exit 1
+  fi
+else
+  echo "⚠️  Pulando auto-versionamento (não está na branch main)"
+fi 

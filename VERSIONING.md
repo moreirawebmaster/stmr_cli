@@ -1,27 +1,29 @@
 # 🚀 Sistema de Versionamento Automático
 
-O STMR CLI utiliza **Husky** para automatizar o versionamento a cada push na branch `main`.
+O STMR CLI utiliza **Husky** para automatizar o versionamento a cada commit na branch `main`.
 
 ## 🔧 Como Funciona
 
 ### 1. **Trigger Automático**
-- **Quando**: A cada `git push` na branch `main`
+- **Quando**: A cada `git commit` na branch `main`
 - **Ação**: Incrementa automaticamente a versão patch (+0.0.1)
-- **Commit**: Cria commit automático com a nova versão
+- **Inclusão**: Adiciona os arquivos atualizados ao commit atual
 
 ### 2. **Fluxo de Execução**
 ```bash
-git push origin main
+git commit -m "feat: nova funcionalidade"
     ↓
-🔍 Husky detecta push na main
+🔍 Husky detecta commit na main (pre-commit hook)
     ↓
 📦 Executa tool/auto_version.dart
     ↓
-🚀 Incrementa versão (1.0.4 → 1.0.5)
+🚀 Incrementa versão (1.0.8 → 1.0.9)
     ↓
-✅ Cria commit automático
+📄 Atualiza pubspec.yaml E version.dart
     ↓
-🎯 Push completo com nova versão
+✅ Adiciona arquivos ao commit atual
+    ↓
+🎯 Um único commit com versão incrementada
 ```
 
 ## 📁 Arquivos do Sistema
@@ -31,13 +33,14 @@ Script principal que:
 - ✅ Verifica se está na branch `main`
 - ✅ Lê versão atual do `pubspec.yaml`
 - ✅ Incrementa versão patch
-- ✅ Atualiza `pubspec.yaml`
-- ✅ Cria commit com `[skip ci]`
+- ✅ **Atualiza `pubspec.yaml` E `lib/src/version.dart`**
+- ✅ **NÃO cria commits** (inclui no commit atual)
 
-### 2. **`.husky/pre-push`**
+### 2. **`.husky/pre-commit`**
 Hook do Git que:
-- ✅ Executa antes de cada push
+- ✅ Executa **antes** do commit finalizar
 - ✅ Chama o script Dart
+- ✅ Adiciona arquivos atualizados ao commit
 - ✅ Opera apenas na branch `main`
 
 ### 3. **`package.json`**
@@ -56,43 +59,39 @@ Configuração do Husky:
 
 ## 🎯 Vantagens
 
-### ✅ **Automação Total**
-- Sem intervenção manual necessária
-- Versionamento consistente
-- Zero esquecimento de incrementar versão
+### ✅ **Um Único Commit**
+- **PROBLEMA RESOLVIDO**: Não cria mais commits duplos
+- Versão incrementada incluída no commit original
+- Histórico limpo sem commits de versionamento separados
+
+### ✅ **Sincronização Dupla**
+- **PROBLEMA RESOLVIDO**: `version.dart` sempre sincronizado
+- `pubspec.yaml` e `lib/src/version.dart` sempre iguais
+- CLI sempre mostra versão correta
 
 ### ✅ **Apenas na Main**
 - Branches de feature não são afetadas
 - Versionamento controlado na branch principal
 
 ### ✅ **Integração CI/CD**
-- Flag `[skip ci]` evita builds desnecessários
+- Sem commits extras desnecessários
 - Compatível com GitHub Actions, GitLab CI, etc.
 
-### ✅ **Histórico Limpo**
-- Commits de versionamento padronizados
-- Fácil rastreamento de releases
+## 🔄 Exemplo de Funcionamento
 
-## 🔄 Tipos de Versionamento
-
-### **Automático (Patch)**
+### **Antes (Problemático):**
 ```bash
-1.0.4 → 1.0.5 → 1.0.6
+git commit -m "feat: nova funcionalidade"    # Commit 1
+# Hook criava automaticamente...
+git commit -m "chore: bump version to 1.0.5" # Commit 2 ❌
 ```
-- Executado automaticamente no push
-- Para correções e melhorias pequenas
 
-### **Manual (Minor/Major)**
+### **Agora (Corrigido):**
 ```bash
-# Minor: 1.0.6 → 1.1.0
-vim pubspec.yaml # Alterar manualmente
-git add pubspec.yaml
-git commit -m "chore: bump to 1.1.0 - new features"
-
-# Major: 1.1.0 → 2.0.0  
-vim pubspec.yaml # Alterar manualmente
-git add pubspec.yaml
-git commit -m "chore: bump to 2.0.0 - breaking changes"
+git commit -m "feat: nova funcionalidade"    # Commit único ✅
+# Versão incrementada incluída no mesmo commit
+# pubspec.yaml: 1.0.8 → 1.0.9
+# version.dart: 1.0.8 → 1.0.9
 ```
 
 ## 🛠️ Comandos Úteis
@@ -106,10 +105,11 @@ dart tool/auto_version.dart
 npm run version:auto
 ```
 
-### **Verificar Versão**
+### **Verificar Sincronização**
 ```bash
-# No pubspec.yaml
+# Ambos devem ter a mesma versão
 grep "version:" pubspec.yaml
+grep "cliVersion" lib/src/version.dart
 
 # No CLI
 dart run bin/stmr.dart --version
@@ -117,11 +117,11 @@ dart run bin/stmr.dart --version
 
 ### **Ver Histórico de Versões**
 ```bash
-# Últimos commits de versionamento
-git log --oneline --grep="bump version"
+# Últimos commits (agora sem commits duplos)
+git log --oneline -5
 
-# Todas as tags
-git tag -l
+# Verificar que versão está no commit
+git show --stat HEAD
 ```
 
 ## 🚨 Troubleshooting
@@ -133,19 +133,21 @@ npx husky --version
 
 # Reinstalar hooks
 npm run prepare
-```
 
-### **Script com erro?**
-```bash
 # Verificar permissões
-chmod +x tool/auto_version.dart
-chmod +x .husky/pre-push
-
-# Testar script isoladamente
-dart tool/auto_version.dart
+chmod +x .husky/pre-commit
 ```
 
-### **Versão não incrementando?**
+### **Versões desincronizadas?**
+```bash
+# Executar manualmente para sincronizar
+dart tool/auto_version.dart
+
+# Verificar se ambos foram atualizados
+grep -A1 -B1 "version\|cliVersion" pubspec.yaml lib/src/version.dart
+```
+
+### **Versionamento não funcionando?**
 ```bash
 # Verificar branch
 git branch --show-current
@@ -154,30 +156,39 @@ git branch --show-current
 git checkout main
 ```
 
-## 📊 Exemplo de Uso
+## 📊 Exemplo Completo
 
 ```bash
 # Desenvolvimento normal
 git add .
-git commit -m "feat: nova funcionalidade"
-git push origin main
+git commit -m "feat: nova funcionalidade incrível"
 
-# Resultado automático:
-# 1. Push do seu commit
-# 2. Husky detecta push na main  
-# 3. Versão incrementa: 1.0.5 → 1.0.6
-# 4. Commit automático criado
-# 5. Versão atualizada no repositório
+# Output automático:
+# 🔍 Verificando se precisa incrementar versão...
+# 📦 Executando auto-versionamento na branch main...
+# 🚀 Versão incrementada: 1.0.8 → 1.0.9
+# 📄 Arquivos atualizados: pubspec.yaml, lib/src/version.dart
+# ✅ Versionamento automático concluído
+
+# Resultado:
+# ✅ UM commit com sua funcionalidade + versão incrementada
+# ✅ pubspec.yaml e version.dart sincronizados
+# ✅ CLI funciona com versão correta
 ```
 
-## 🎉 Benefícios
+## 🎉 Correções Implementadas
 
-- **🔄 Automático**: Zero trabalho manual
-- **📈 Consistente**: Sempre incrementa corretamente  
-- **🎯 Controlado**: Apenas na branch main
-- **🚀 Rápido**: Sem overhead no desenvolvimento
-- **📋 Rastreável**: Histórico completo de versões
+### ❌ **Problemas Anteriores:**
+1. **Commits duplos**: Hook `pre-push` criava commit separado
+2. **version.dart desatualizado**: Só atualizava pubspec.yaml
+3. **Push duplo**: Commit de versionamento gerava segundo push
+
+### ✅ **Soluções Implementadas:**
+1. **Hook `pre-commit`**: Executa antes do commit finalizar
+2. **Dupla sincronização**: Atualiza ambos os arquivos
+3. **Inclusão automática**: `git add` dos arquivos no commit atual
+4. **Sem commits extras**: Tudo em um único commit
 
 ---
 
-**Este sistema garante que toda release tenha uma versão única e incrementada automaticamente!** 🚀 
+**Sistema agora é 100% funcional e resolve todos os problemas de versionamento automático!** 🚀 

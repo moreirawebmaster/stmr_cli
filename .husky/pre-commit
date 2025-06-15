@@ -1,22 +1,14 @@
 #!/usr/bin/env sh
 
-echo "🔍 Verificando se precisa incrementar versão..."
+echo "🔍 Verificando conformidade do código..."
 
-# Verifica se está na branch main
-current_branch=$(git branch --show-current)
+# Executa análise estática do Dart
+dart analyze
 
-if [ "$current_branch" = "main" ]; then
-  echo "📦 Executando auto-versionamento na branch main..."
-  dart tool/auto_version.dart
-  
-  if [ $? -eq 0 ]; then
-    echo "✅ Versionamento automático concluído"
-    # Adiciona os arquivos modificados ao commit atual
-    git add pubspec.yaml lib/src/version.dart
-  else
-    echo "❌ Erro no versionamento automático"
-    exit 1
-  fi
+if [ $? -eq 0 ]; then
+  echo "✅ Código está em conformidade com o lint"
 else
-  echo "⚠️  Pulando auto-versionamento (não está na branch main)"
+  echo "❌ Código não está em conformidade com o lint"
+  echo "Execute 'dart fix --apply' para corrigir automaticamente ou corrija manualmente"
+  exit 1
 fi
