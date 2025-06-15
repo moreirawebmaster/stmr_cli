@@ -39,34 +39,53 @@ class UpgradeCommand implements ICommand {
     _logger.info('🔍 Verificando atualizações disponíveis...');
 
     try {
-      // Obter a versão atual
-      final currentVersion = await _getCurrentVersion();
-      _logger.info('📦 Versão atual: $currentVersion');
+      String? currentVersion;
+      bool isInstalled = false;
+
+      // Verificar se está instalado e obter versão atual
+      try {
+        currentVersion = await _getCurrentVersion();
+        isInstalled = true;
+        _logger.info('📦 Versão atual instalada: $currentVersion');
+      } catch (e) {
+        _logger.info('📦 STMR CLI não está instalado globalmente');
+        isInstalled = false;
+      }
 
       // Obter a última versão disponível
       final latestVersion = await _getLatestVersion();
       _logger.info('📦 Última versão disponível: $latestVersion');
 
-      // Comparar versões
-      final currentIsNewer = _compareVersions(currentVersion, latestVersion) >= 0;
+      // Se não estiver instalado, instalar automaticamente
+      if (!isInstalled) {
+        _logger.info('⬇️  Instalando STMR CLI...');
+        await _performUpgrade(latestVersion);
+        _logger.success('✅ STMR CLI instalado com sucesso!');
+        return;
+      }
 
-      if (currentIsNewer && !force) {
+      // Comparar versões se estiver instalado
+      final needsUpdate = _compareVersions(currentVersion!, latestVersion) < 0;
+
+      if (!needsUpdate && !force) {
         _logger.success('✅ Você já está na última versão!');
         return;
       }
 
       if (checkOnly) {
-        if (!currentIsNewer) {
+        if (needsUpdate) {
           _logger.info('🆕 Nova versão disponível: $latestVersion');
           _logger.info('Execute "stmr upgrade" para atualizar.');
+        } else {
+          _logger.success('✅ Você já está na última versão!');
         }
         return;
       }
 
-      if (currentIsNewer && force) {
+      if (!needsUpdate && force) {
         _logger.info('🔄 Forçando reinstalação da versão atual...');
       } else {
-        _logger.info('🔄 Atualizando para a versão $latestVersion...');
+        _logger.info('🔄 Atualizando de $currentVersion para $latestVersion...');
       }
 
       // Realizar o upgrade
@@ -78,87 +97,56 @@ class UpgradeCommand implements ICommand {
     }
   }
 
-  /// Obtém a versão atual do CLI
+  /// Obtém a versão atual instalada do CLI
   Future<String> _getCurrentVersion() async {
     try {
-      // Primeiro, tenta obter a versão pelo comando stmr diretamente
-      try {
-        final result = await Process.run('stmr', ['--version']);
-        if (result.exitCode == 0) {
-          return result.stdout.toString().trim();
-        }
-      } catch (e) {
-        // Se não conseguir executar o comando stmr, tenta pegar do pubspec.yaml local
-        _logger.warn('⚠️  Comando stmr não encontrado no PATH, verificando versão local...');
+      // Tenta obter a versão pelo comando stmr instalado
+      final result = await Process.run('stmr', ['--version']);
+      if (result.exitCode == 0) {
+        return result.stdout.toString().trim();
       }
-
-      // Se não conseguir executar o comando stmr, tenta pegar do pubspec.yaml local
-      final localVersion = PubspecUtils.getVersion();
-      return localVersion;
     } catch (e) {
-      throw Exception('Erro ao obter versão atual: $e');
+      // Se stmr não estiver instalado globalmente
     }
+
+    // Se não conseguir obter versão instalada, considera como não instalado
+    throw Exception(
+      'STMR CLI não está instalado globalmente. Use "dart pub global activate --source git https://github.com/moreirawebmaster/stmr_cli.git" para instalar.',
+    );
   }
 
   /// Obtém a última versão disponível no repositório
   Future<String> _getLatestVersion() async {
+    // Clone temporário para obter versão do pubspec.yaml do branch principal
+    final tempDir = Directory.systemTemp.createTempSync('stmr_upgrade');
     try {
-      // Primeiro, tenta obter a última tag remotamente sem clonar
-      final remoteTagResult = await Process.run(
+      final result = await Process.run(
         'git',
-        ['ls-remote', '--tags', '--sort=-version:refname', 'https://github.com/moreirawebmaster/stmr_cli.git'],
+        ['clone', '--depth', '1', 'https://github.com/moreirawebmaster/stmr_cli.git', tempDir.path],
       );
 
-      if (remoteTagResult.exitCode == 0) {
-        final output = remoteTagResult.stdout.toString();
-        final tagMatches = RegExp(r'refs/tags/v?(\d+\.\d+\.\d+)$', multiLine: true).allMatches(output);
-        if (tagMatches.isNotEmpty) {
-          final latestTag = tagMatches.first.group(1)!;
-          return latestTag;
-        }
+      if (result.exitCode != 0) {
+        throw Exception('Erro ao clonar repositório: ${result.stderr}');
       }
 
-      // Se não conseguir remotamente, faz clone temporário
-      final tempDir = Directory.systemTemp.createTempSync('stmr_upgrade');
-      try {
-        final result = await Process.run(
-          'git',
-          ['clone', '--depth', '1', 'https://github.com/moreirawebmaster/stmr_cli.git', tempDir.path],
-        );
-
-        if (result.exitCode != 0) {
-          throw Exception('Erro ao clonar repositório: ${result.stderr}');
-        }
-
-        // Obter a última tag
-        final tagResult = await Process.run(
-          'git',
-          ['describe', '--tags', '--abbrev=0'],
-          workingDirectory: tempDir.path,
-        );
-
-        if (tagResult.exitCode != 0) {
-          // Se não houver tags, pega a versão do pubspec.yaml do repositório
-          final pubspecFile = File('${tempDir.path}/pubspec.yaml');
-          if (pubspecFile.existsSync()) {
-            final pubspecContent = await pubspecFile.readAsString();
-            final versionMatch = RegExp(r'version:\s*(.+)').firstMatch(pubspecContent);
-            if (versionMatch != null) {
-              return versionMatch.group(1)!.trim();
-            }
-          }
-          throw Exception('Erro ao obter última tag: ${tagResult.stderr}');
-        }
-
-        return tagResult.stdout.toString().trim();
-      } finally {
-        // Limpar o diretório temporário
-        if (tempDir.existsSync()) {
-          await tempDir.delete(recursive: true);
-        }
+      // Pegar a versão do pubspec.yaml do repositório
+      final pubspecFile = File('${tempDir.path}/pubspec.yaml');
+      if (!pubspecFile.existsSync()) {
+        throw Exception('pubspec.yaml não encontrado no repositório');
       }
-    } catch (e) {
-      throw Exception('Erro ao obter última versão: $e');
+
+      final pubspecContent = await pubspecFile.readAsString();
+      final versionMatch = RegExp(r'version:\s*(.+)').firstMatch(pubspecContent);
+      if (versionMatch == null) {
+        throw Exception('Versão não encontrada no pubspec.yaml do repositório');
+      }
+
+      return versionMatch.group(1)!.trim();
+    } finally {
+      // Limpar o diretório temporário
+      if (tempDir.existsSync()) {
+        await tempDir.delete(recursive: true);
+      }
     }
   }
 
@@ -188,43 +176,20 @@ class UpgradeCommand implements ICommand {
       // Instalar nova versão
       _logger.info('⬇️  Instalando versão $version...');
 
-      // Tenta instalar com tag primeiro
-      List<String> installArgs = [
+      // Usar sempre a versão mais recente do repositório
+      // A detecção de versão serve apenas para informar o usuário
+      final installArgs = [
         'pub',
         'global',
         'activate',
-        'stmr_cli',
-        '--source',
+        '-s',
         'git',
         'https://github.com/moreirawebmaster/stmr_cli.git',
       ];
 
-      // Se a versão não é a mesma do pubspec.yaml atual, tenta usar a tag
-      if (version.startsWith('v')) {
-        installArgs.addAll(['--git-ref', version]);
-      } else if (version != '1.0.0') {
-        installArgs.addAll(['--git-ref', 'v$version']);
-      }
-
       final installResult = await Process.run('dart', installArgs);
-
       if (installResult.exitCode != 0) {
-        // Se falhou com tag, tenta sem tag (versão mais recente)
-        _logger.warn('⚠️  Falha ao instalar versão específica, tentando versão mais recente...');
-        final fallbackArgs = [
-          'pub',
-          'global',
-          'activate',
-          'stmr_cli',
-          '--source',
-          'git',
-          'https://github.com/moreirawebmaster/stmr_cli.git',
-        ];
-
-        final fallbackResult = await Process.run('dart', fallbackArgs);
-        if (fallbackResult.exitCode != 0) {
-          throw Exception('Erro ao instalar nova versão: ${fallbackResult.stderr}');
-        }
+        throw Exception('Erro ao instalar nova versão: ${installResult.stderr}');
       }
 
       _logger.info('✅ Instalação concluída!');
