@@ -1,6 +1,6 @@
 name: stmr_cli
 description: Official CLI for STMR Flutter projects
-version: 1.0.5
+version: 1.0.6
 homepage: https://github.com/moreirawebmaster/stmr_cli
 
 environment:
