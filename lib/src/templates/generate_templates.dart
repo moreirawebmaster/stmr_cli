@@ -10,7 +10,6 @@ import '../controllers/${pageNameSnake}_controller.dart';
 
 /// Página $pageNamePascal
 class ${pageNamePascal}Page extends EngineBasePage<${pageNamePascal}Controller> {
-  /// Construtor
   const ${pageNamePascal}Page({super.key});
 
   @override
@@ -62,29 +61,22 @@ class ${pageNamePascal}Page extends EngineBasePage<${pageNamePascal}Controller> 
 
 /// Controller para $controllerNamePascal
 class ${controllerNamePascal}Controller extends EngineBaseController {
-  // Dependências e serviços aqui
-  // final _repository = Get.find<I${controllerNamePascal}Repository>();
-  
-  // Observáveis
   final data = <String, dynamic>{}.obs;
   final error = RxnString();
 
   @override
   void onInit() {
-    // Inicialização do controller
     super.onInit();
   }
 
   @override
   void onReady() {
-    // Carregamento inicial dos dados
     _loadData();
     super.onReady();
   }
 
   @override
   void onClose() {
-    // Limpeza de recursos
     super.onClose();
   }
 
@@ -94,10 +86,7 @@ class ${controllerNamePascal}Controller extends EngineBaseController {
     error.value = null;
     
     try {
-      // Implementar carregamento de dados
-      await Future.delayed(const Duration(seconds: 1)); // Simulação
-      
-      // Atualizar dados
+      await Future.delayed(const Duration(seconds: 1));
       data.value = {'message': 'Dados carregados com sucesso'};
     } catch (e) {
       error.value = 'Erro ao carregar dados: \$e';
@@ -136,12 +125,6 @@ abstract class I${repositoryNamePascal}Repository {
 /// Implementação do repositório $repositoryNamePascal
 class ${repositoryNamePascal}Repository extends EngineBaseRepository implements I${repositoryNamePascal}Repository {
   final String _basePath = '/api/$repositoryNameSnake';
-  
-  @override
-  void onInit() {
-    // Inicialização do repositório
-    super.onInit();
-  }
 
   @override
   Future<EngineResult<String, dynamic>> getData() async {
@@ -216,12 +199,10 @@ class ${repositoryNamePascal}Repository extends EngineBaseRepository implements 
 
     return '''/// DTO para resposta de $dtoNamePascal
 class ${dtoNamePascal}ResponseDto {
-  // Construtor
   ${dtoNamePascal}ResponseDto({
 $constructorParams
   });
 
-  // Factories
   factory ${dtoNamePascal}ResponseDto.fromMap(Map<String, dynamic> map) => ${dtoNamePascal}ResponseDto(
 $fromMapBody
       );
@@ -230,7 +211,6 @@ $fromMapBody
 ${_generateEmptyFactoryParams(jsonData)}
       );
 
-  // Methods
   Map<String, dynamic> toMap() => {
 $toMapBody
       };
@@ -243,7 +223,6 @@ $copyWithBody
     );
   }
 
-  // Properties
 $properties
 }''';
   }
@@ -254,9 +233,7 @@ $properties
 
     jsonData.forEach((key, value) {
       final type = _getDartType(value);
-      buffer.writeln('  /// $key');
       buffer.writeln('  final $type $key;');
-      buffer.writeln();
     });
 
     return buffer.toString();

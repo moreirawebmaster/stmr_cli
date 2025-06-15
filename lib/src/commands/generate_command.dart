@@ -623,13 +623,19 @@ class GenerateCommand implements ICommand {
 
 /// Informações sobre a estrutura do módulo
 class ModuleInfo {
+  /// Construtor do ModuleInfo
   const ModuleInfo({
     required this.name,
     required this.path,
     required this.hasFeatures,
   });
 
+  /// Nome do módulo
   final String name;
+
+  /// Caminho completo do módulo
   final String path;
+
+  /// Se o módulo tem estrutura de features múltiplas
   final bool hasFeatures;
 }

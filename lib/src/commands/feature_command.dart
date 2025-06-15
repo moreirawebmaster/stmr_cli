@@ -113,7 +113,11 @@ class FeatureCommand implements ICommand {
 
   /// Cria estrutura com múltiplas features
   Future<void> _createMultipleFeaturesStructure(
-      String modulePath, String moduleNamePascal, String moduleNameSnake, List<String> features) async {
+    String modulePath,
+    String moduleNamePascal,
+    String moduleNameSnake,
+    List<String> features,
+  ) async {
     if (features.isEmpty) {
       // Se não especificou features, criar uma estrutura base
       features = ['main'];
@@ -194,7 +198,11 @@ class FeatureCommand implements ICommand {
 
   /// Cria arquivos para feature específica
   Future<void> _createFeatureFiles(
-      String featurePath, String featureNamePascal, String featureNameSnake, String moduleNameSnake) async {
+    String featurePath,
+    String featureNamePascal,
+    String featureNameSnake,
+    String moduleNameSnake,
+  ) async {
     // Criar arquivo de binding
     await _createFile(
       path.join(featurePath, 'bindings', '${featureNameSnake}_binding.dart'),
