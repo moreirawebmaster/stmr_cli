@@ -13,7 +13,7 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
       with:
-        token: ${{ secrets.PAT }}
+        token: ${{ github.token }}
         fetch-depth: 0
 
     - name: Setup Dart
@@ -43,7 +43,7 @@ jobs:
     - name: Create tag and release
       if: steps.tag_check.outputs.exists == 'false'
       env:
-        PAT: ${{ secrets.PAT }}
+        GITHUB_TOKEN: ${{ github.token }}
       run: |
         VERSION=${{ steps.version.outputs.version }}
         
