@@ -234,11 +234,21 @@ dart tool/auto_version.dart
 - Cria tag e release automaticamente
 - Release notes geradas dos commits e PRs
 
+### **Push and Sync (Recomendado)**
+```bash
+# Push com sincronização automática
+npm run push
+# → Push + versionamento + delay + pull + status
+
+# OU comando direto
+dart tool/push_and_sync.dart
+```
+
 ### **Manual (Opcional)**
 ```bash
 # Após o push, execute localmente para ações extras:
 dart tool/post_push.dart
-# → Auto pull + Tag local + Release (se GitHub CLI configurado)
+# → Tag local + Release (se GitHub CLI configurado)
 ```
 
 ## 📋 **Versionamento**

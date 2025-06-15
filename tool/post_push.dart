@@ -33,33 +33,16 @@ void main(List<String> args) async {
 
     _log('🚀 Executando ações pós-push para versão $currentVersion');
 
-    // 1. Auto pull para manter código atualizado
-    await _autoPull();
-
-    // 2. Criar tag da versão
+    // 1. Criar tag da versão
     await _createTag(currentVersion);
 
-    // 3. Criar release no GitHub com release notes
+    // 2. Criar release no GitHub com release notes
     await _createGitHubRelease(currentVersion);
 
     _log('✅ Todas as ações pós-push concluídas com sucesso!');
   } catch (e) {
     _log('❌ Erro nas ações pós-push: $e');
     exit(1);
-  }
-}
-
-/// Faz pull para manter o código atualizado
-Future<void> _autoPull() async {
-  _log('📥 Fazendo auto pull para manter código atualizado...');
-
-  final pullResult = await Process.run('git', ['pull', 'origin', 'main']);
-
-  if (pullResult.exitCode == 0) {
-    _log('✅ Auto pull concluído');
-  } else {
-    _log('⚠️  Warning no auto pull: ${pullResult.stderr}');
-    // Não falha o processo, apenas avisa
   }
 }
 
