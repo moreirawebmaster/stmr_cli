@@ -1,24 +1,46 @@
 import 'dart:io';
 
+import 'package:mason_logger/mason_logger.dart';
 import 'package:yaml/yaml.dart';
+
+import '../version.dart';
 
 /// Utilitários para trabalhar com pubspec.yaml
 class PubspecUtils {
-  /// Lê a versão atual do pubspec.yaml
+  /// Obtém a versão do CLI de forma simples
   static String getVersion() {
-    final pubspecFile = File('pubspec.yaml');
-    if (!pubspecFile.existsSync()) {
-      throw Exception('Arquivo pubspec.yaml não encontrado');
+    return cliVersion; // Usa sempre a versão compilada
+  }
+
+  /// Obtém versão do pubspec.yaml (para desenvolvimento)
+  static String? getVersionFromPubspec() {
+    try {
+      final pubspecFile = File('pubspec.yaml');
+      if (!pubspecFile.existsSync()) return null;
+
+      final pubspecContent = pubspecFile.readAsStringSync();
+      final yaml = loadYaml(pubspecContent) as Map;
+      return yaml['version']?.toString();
+    } catch (e) {
+      return null;
     }
+  }
 
-    final content = pubspecFile.readAsStringSync();
-    final yaml = loadYaml(content) as Map;
+  /// Obtém versão remota do GitHub
+  static Future<String?> getRemoteVersion() async {
+    try {
+      final result = await Process.run('curl', [
+        '-s',
+        'https://raw.githubusercontent.com/thiagomoreira/stmr_cli/main/pubspec.yaml',
+      ]);
 
-    final version = yaml['version'] as String?;
-    if (version == null || version.isEmpty) {
-      throw Exception('Versão não encontrada no pubspec.yaml');
+      if (result.exitCode == 0) {
+        final yaml = loadYaml(result.stdout) as Map;
+        return yaml['version']?.toString();
+      }
+    } catch (e) {
+      Logger().err('Erro ao obter versão remota: $e');
     }
-
-    return version;
+    return null;
   }
 }
