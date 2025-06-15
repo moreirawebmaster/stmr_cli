@@ -34,10 +34,11 @@ git push origin main
 ## 📁 Arquivos do Sistema
 
 ### 1. **`.husky/pre-commit`**
-Hook de qualidade que:
-- ✅ Executa `dart analyze`
-- ✅ Bloqueia commit se houver issues de lint
+Hook de qualidade **RIGOROSO** que:
+- ✅ Executa `dart analyze --fatal-warnings --fatal-infos`
+- ✅ Bloqueia commit se houver **QUALQUER** issue (erros, warnings, infos)
 - ✅ Sugere `dart fix --apply` para correção automática
+- ✅ Garante código com **zero issues** antes de permitir commit
 
 ### 2. **`.husky/pre-push`**
 Hook de versionamento que:
@@ -70,10 +71,11 @@ Configuração do Husky:
 
 ## 🎯 Vantagens
 
-### ✅ **Qualidade Garantida**
-- **pre-commit**: Código sempre conforme lint antes do commit
-- **Bloqueio automático**: Commits inválidos são rejeitados
+### ✅ **Qualidade Garantida (RIGOROSA)**
+- **pre-commit**: Bloqueia **TODOS** os tipos de issues (erros, warnings, infos)
+- **Bloqueio automático**: Commits com qualquer problema são rejeitados
 - **Correção sugerida**: `dart fix --apply` para resolver automaticamente
+- **Zero tolerância**: Garante código perfeito antes do commit
 
 ### ✅ **Versionamento Inteligente**
 - **pre-push**: Bump apenas no momento do push
@@ -99,9 +101,9 @@ git add .
 git commit -m "feat: nova funcionalidade incrível"
 
 # Output do pre-commit:
-# 🔍 Verificando conformidade do código...
+# 🔍 Verificando qualidade do código com dart analyze...
 # Analyzing stmr_cli... No issues found!
-# ✅ Código está em conformidade com o lint
+# ✅ Código aprovado: Nenhum erro, warning ou info encontrado
 
 # 2. Faz push quando pronto
 git push origin main
@@ -121,17 +123,19 @@ git push origin main
 # ✅ CLI: stmr --version → 1.0.10
 ```
 
-### **Caso de Lint Error:**
+### **Caso de Issues no Código:**
 ```bash
 git commit -m "feat: código com problemas"
 
 # Output do pre-commit:
-# 🔍 Verificando conformidade do código...
+# 🔍 Verificando qualidade do código com dart analyze...
 # Analyzing stmr_cli... 3 issues found!
-# ❌ Código não está em conformidade com o lint
-# Execute 'dart fix --apply' para corrigir automaticamente
+# ❌ Commit bloqueado: Encontrados problemas no código
+# 🔧 Para corrigir automaticamente, execute:
+#    dart fix --apply
+# 💡 Dica: Use // ignore: rule_name para ignorar issues específicos se necessário
 
-# Commit BLOQUEADO até corrigir lint ✅
+# Commit BLOQUEADO até resolver TODOS os issues ✅
 ```
 
 ## 🛠️ Comandos Úteis

@@ -1,14 +1,29 @@
 #!/usr/bin/env sh
 
-echo "🔍 Verificando conformidade do código..."
+echo "🔍 Verificando qualidade do código com dart analyze..."
 
-# Executa análise estática do Dart
-dart analyze
+# Executa análise estática do Dart com warnings E infos fatais
+analyze_output=$(dart analyze --fatal-warnings --fatal-infos 2>&1)
+analyze_exit_code=$?
 
-if [ $? -eq 0 ]; then
-  echo "✅ Código está em conformidade com o lint"
+# Mostra sempre a saída do analyze (para transparência)
+if [ -n "$analyze_output" ]; then
+  echo "$analyze_output"
+fi
+
+# Verifica o resultado do analyze
+if [ $analyze_exit_code -eq 0 ]; then
+  echo "✅ Código aprovado: Nenhum erro, warning ou info encontrado"
 else
-  echo "❌ Código não está em conformidade com o lint"
-  echo "Execute 'dart fix --apply' para corrigir automaticamente ou corrija manualmente"
+  echo ""
+  echo "❌ Commit bloqueado: Encontrados problemas no código"
+  echo "🔧 Para corrigir automaticamente, execute:"
+  echo "   dart fix --apply"
+  echo ""
+  echo "🔍 Para verificar manualmente:"
+  echo "   dart analyze"
+  echo ""
+  echo "💡 Dica: Use // ignore: rule_name para ignorar issues específicos se necessário"
+  echo ""
   exit 1
 fi
