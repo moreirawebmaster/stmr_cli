@@ -1,49 +1,60 @@
 # 🚀 Sistema de Versionamento Automático
 
-O STMR CLI utiliza **Husky** para automatizar o versionamento a cada commit na branch `main`.
+O STMR CLI utiliza **Husky** com hooks separados para **qualidade de código** e **versionamento automático**.
 
 ## 🔧 Como Funciona
 
-### 1. **Trigger Automático**
-- **Quando**: A cada `git commit` na branch `main`
-- **Ação**: Incrementa automaticamente a versão patch (+0.0.1)
-- **Inclusão**: Adiciona os arquivos atualizados ao commit atual
+### 1. **Responsabilidades Separadas**
+- **pre-commit**: Verifica qualidade do código (`dart analyze`)
+- **pre-push**: Incrementa versão automaticamente e amenda ao commit
 
 ### 2. **Fluxo de Execução**
 ```bash
 git commit -m "feat: nova funcionalidade"
     ↓
-🔍 Husky detecta commit na main (pre-commit hook)
+🔍 pre-commit: Executa dart analyze
+    ↓
+✅ Commit criado (se lint OK)
+    ↓
+git push origin main
+    ↓
+🔍 pre-push: Detecta push na main
     ↓
 📦 Executa tool/auto_version.dart
     ↓
-🚀 Incrementa versão (1.0.8 → 1.0.9)
+🚀 Incrementa versão (1.0.9 → 1.0.10)
     ↓
 📄 Atualiza pubspec.yaml E version.dart
     ↓
-✅ Adiciona arquivos ao commit atual
+✅ Amenda arquivos ao último commit
     ↓
-🎯 Um único commit com versão incrementada
+🎯 Push único com versão incrementada
 ```
 
 ## 📁 Arquivos do Sistema
 
-### 1. **`tool/auto_version.dart`**
+### 1. **`.husky/pre-commit`**
+Hook de qualidade que:
+- ✅ Executa `dart analyze`
+- ✅ Bloqueia commit se houver issues de lint
+- ✅ Sugere `dart fix --apply` para correção automática
+
+### 2. **`.husky/pre-push`**
+Hook de versionamento que:
+- ✅ Executa apenas na branch `main`
+- ✅ Chama o script de bump
+- ✅ Amenda versão ao commit atual
+- ✅ Permite push prosseguir
+
+### 3. **`tool/auto_version.dart`**
 Script principal que:
-- ✅ Verifica se está na branch `main`
+- ✅ Verifica branch `main`
 - ✅ Lê versão atual do `pubspec.yaml`
 - ✅ Incrementa versão patch
 - ✅ **Atualiza `pubspec.yaml` E `lib/src/version.dart`**
-- ✅ **NÃO cria commits** (inclui no commit atual)
+- ✅ **Não cria commits** (usado pelo hook)
 
-### 2. **`.husky/pre-commit`**
-Hook do Git que:
-- ✅ Executa **antes** do commit finalizar
-- ✅ Chama o script Dart
-- ✅ Adiciona arquivos atualizados ao commit
-- ✅ Opera apenas na branch `main`
-
-### 3. **`package.json`**
+### 4. **`package.json`**
 Configuração do Husky:
 ```json
 {
@@ -59,46 +70,87 @@ Configuração do Husky:
 
 ## 🎯 Vantagens
 
-### ✅ **Um Único Commit**
-- **PROBLEMA RESOLVIDO**: Não cria mais commits duplos
-- Versão incrementada incluída no commit original
-- Histórico limpo sem commits de versionamento separados
+### ✅ **Qualidade Garantida**
+- **pre-commit**: Código sempre conforme lint antes do commit
+- **Bloqueio automático**: Commits inválidos são rejeitados
+- **Correção sugerida**: `dart fix --apply` para resolver automaticamente
 
-### ✅ **Sincronização Dupla**
-- **PROBLEMA RESOLVIDO**: `version.dart` sempre sincronizado
-- `pubspec.yaml` e `lib/src/version.dart` sempre iguais
-- CLI sempre mostra versão correta
+### ✅ **Versionamento Inteligente**
+- **pre-push**: Bump apenas no momento do push
+- **Branch-specific**: Apenas na `main`
+- **Amend automático**: Versão incluída no commit original
 
-### ✅ **Apenas na Main**
-- Branches de feature não são afetadas
-- Versionamento controlado na branch principal
+### ✅ **Um Único Commit Final**
+- **Sem commits duplos**: Versão amendada ao commit original
+- **Histórico limpo**: Cada funcionalidade = um commit com versão
+- **Sincronização garantida**: pubspec.yaml + version.dart sempre iguais
 
-### ✅ **Integração CI/CD**
-- Sem commits extras desnecessários
-- Compatível com GitHub Actions, GitLab CI, etc.
+### ✅ **Separação de Responsabilidades**
+- **Qualidade**: Verificada no commit
+- **Versionamento**: Aplicado no push
+- **Flexibilidade**: Pode commitar sem fazer push imediato
 
 ## 🔄 Exemplo de Funcionamento
 
-### **Antes (Problemático):**
+### **Fluxo Ideal:**
 ```bash
-git commit -m "feat: nova funcionalidade"    # Commit 1
-# Hook criava automaticamente...
-git commit -m "chore: bump version to 1.0.5" # Commit 2 ❌
+# 1. Desenvolve funcionalidade
+git add .
+git commit -m "feat: nova funcionalidade incrível"
+
+# Output do pre-commit:
+# 🔍 Verificando conformidade do código...
+# Analyzing stmr_cli... No issues found!
+# ✅ Código está em conformidade com o lint
+
+# 2. Faz push quando pronto
+git push origin main
+
+# Output do pre-push:
+# 🔍 Verificando se precisa incrementar versão antes do push...
+# 📦 Executando auto-versionamento na branch main...
+# 🚀 Versão incrementada: 1.0.9 → 1.0.10
+# 📄 Arquivos atualizados: pubspec.yaml, lib/src/version.dart
+# ✅ Versionamento automático concluído
+# 🚀 Versão adicionada ao último commit, prosseguindo com push...
+
+# Resultado final:
+# ✅ Um commit com funcionalidade + versão incrementada
+# ✅ pubspec.yaml: 1.0.10
+# ✅ version.dart: 1.0.10
+# ✅ CLI: stmr --version → 1.0.10
 ```
 
-### **Agora (Corrigido):**
+### **Caso de Lint Error:**
 ```bash
-git commit -m "feat: nova funcionalidade"    # Commit único ✅
-# Versão incrementada incluída no mesmo commit
-# pubspec.yaml: 1.0.8 → 1.0.9
-# version.dart: 1.0.8 → 1.0.9
+git commit -m "feat: código com problemas"
+
+# Output do pre-commit:
+# 🔍 Verificando conformidade do código...
+# Analyzing stmr_cli... 3 issues found!
+# ❌ Código não está em conformidade com o lint
+# Execute 'dart fix --apply' para corrigir automaticamente
+
+# Commit BLOQUEADO até corrigir lint ✅
 ```
 
 ## 🛠️ Comandos Úteis
 
-### **Testar Versionamento**
+### **Corrigir Lint Automaticamente**
 ```bash
-# Executa o script manualmente
+# Corrige a maioria dos problemas de lint
+dart fix --apply
+
+# Verifica se está tudo OK
+dart analyze
+```
+
+### **Testar Hooks Manualmente**
+```bash
+# Testa o pre-commit (lint)
+dart analyze
+
+# Testa o versionamento (apenas se na main)
 dart tool/auto_version.dart
 
 # Ou via npm
@@ -107,88 +159,53 @@ npm run version:auto
 
 ### **Verificar Sincronização**
 ```bash
-# Ambos devem ter a mesma versão
+# Todos devem ter a mesma versão
 grep "version:" pubspec.yaml
 grep "cliVersion" lib/src/version.dart
-
-# No CLI
 dart run bin/stmr.dart --version
-```
-
-### **Ver Histórico de Versões**
-```bash
-# Últimos commits (agora sem commits duplos)
-git log --oneline -5
-
-# Verificar que versão está no commit
-git show --stat HEAD
 ```
 
 ## 🚨 Troubleshooting
 
+### **Lint bloqueando commit?**
+```bash
+# Corrige automaticamente
+dart fix --apply
+
+# Ou corrige manualmente e tenta novamente
+git commit -m "sua mensagem"
+```
+
 ### **Hook não executando?**
 ```bash
-# Verificar se Husky está instalado
-npx husky --version
-
 # Reinstalar hooks
 npm run prepare
 
 # Verificar permissões
-chmod +x .husky/pre-commit
-```
+chmod +x .husky/pre-commit .husky/pre-push
 
-### **Versões desincronizadas?**
-```bash
-# Executar manualmente para sincronizar
-dart tool/auto_version.dart
-
-# Verificar se ambos foram atualizados
-grep -A1 -B1 "version\|cliVersion" pubspec.yaml lib/src/version.dart
+# Verificar se Husky está instalado
+npx husky --version
 ```
 
 ### **Versionamento não funcionando?**
 ```bash
-# Verificar branch
+# Verificar branch (deve ser main)
 git branch --show-current
 
-# Deve ser 'main' para funcionar
-git checkout main
+# Testar manualmente
+dart tool/auto_version.dart
 ```
 
-## 📊 Exemplo Completo
+## 🎉 Benefícios Finais
 
-```bash
-# Desenvolvimento normal
-git add .
-git commit -m "feat: nova funcionalidade incrível"
-
-# Output automático:
-# 🔍 Verificando se precisa incrementar versão...
-# 📦 Executando auto-versionamento na branch main...
-# 🚀 Versão incrementada: 1.0.8 → 1.0.9
-# 📄 Arquivos atualizados: pubspec.yaml, lib/src/version.dart
-# ✅ Versionamento automático concluído
-
-# Resultado:
-# ✅ UM commit com sua funcionalidade + versão incrementada
-# ✅ pubspec.yaml e version.dart sincronizados
-# ✅ CLI funciona com versão correta
-```
-
-## 🎉 Correções Implementadas
-
-### ❌ **Problemas Anteriores:**
-1. **Commits duplos**: Hook `pre-push` criava commit separado
-2. **version.dart desatualizado**: Só atualizava pubspec.yaml
-3. **Push duplo**: Commit de versionamento gerava segundo push
-
-### ✅ **Soluções Implementadas:**
-1. **Hook `pre-commit`**: Executa antes do commit finalizar
-2. **Dupla sincronização**: Atualiza ambos os arquivos
-3. **Inclusão automática**: `git add` dos arquivos no commit atual
-4. **Sem commits extras**: Tudo em um único commit
+- **🔍 Qualidade**: Código sempre passa no lint antes do commit
+- **🚀 Automação**: Versão incrementada automaticamente no push
+- **📦 Único Commit**: Funcionalidade + versão em um commit limpo
+- **🎯 Controle**: Apenas branch main é versionada
+- **⚡ Performance**: Lint rápido no commit, bump rápido no push
+- **🔄 Sincronização**: pubspec.yaml + version.dart sempre iguais
 
 ---
 
-**Sistema agora é 100% funcional e resolve todos os problemas de versionamento automático!** 🚀 
+**Sistema perfeito: qualidade no commit, versionamento no push!** 🚀 
