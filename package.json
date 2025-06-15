@@ -1,0 +1,35 @@
+{
+  "name": "stmr_cli",
+  "version": "1.0.0",
+  "description": "CLI oficial para projetos Flutter da STMR, baseado na arquitetura limpa e padrões estabelecidos.",
+  "main": "index.js",
+  "directories": {
+    "lib": "lib",
+    "test": "test"
+  },
+  "scripts": {
+    "test": "dart test",
+    "version:auto": "dart tool/auto_version.dart",
+    "prepare": "husky"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/moreirawebmaster/stmr_cli.git"
+  },
+  "keywords": [
+    "flutter",
+    "cli",
+    "dart",
+    "stmr",
+    "generator"
+  ],
+  "author": "STMR Team",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/moreirawebmaster/stmr_cli/issues"
+  },
+  "homepage": "https://github.com/moreirawebmaster/stmr_cli#readme",
+  "devDependencies": {
+    "husky": "^9.0.11"
+  }
+}
