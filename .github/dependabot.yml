@@ -1,0 +1,82 @@
+# Configuração do Dependabot para manter dependências atualizadas
+# Documentação: https://docs.github.com/en/code-security/dependabot
+
+version: 2
+updates:
+  # Dependências Dart/Flutter (pubspec.yaml)
+  - package-ecosystem: "pub"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+      timezone: "America/Sao_Paulo"
+    open-pull-requests-limit: 5
+    target-branch: "main"
+    reviewers:
+      - "moreirawebmaster"
+    assignees:
+      - "moreirawebmaster"
+    commit-message:
+      prefix: "⬆️ deps"
+      prefix-development: "⬆️ deps-dev"
+      include: "scope"
+    labels:
+      - "dependencies"
+      - "dart"
+      - "automated"
+    allow:
+      - dependency-type: "direct"
+      - dependency-type: "indirect"
+    ignore:
+      # Ignorar atualizações major que podem quebrar
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
+
+  # Dependências Node.js (package.json) - Para Husky
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "10:00"
+      timezone: "America/Sao_Paulo"
+    open-pull-requests-limit: 3
+    target-branch: "main"
+    reviewers:
+      - "moreirawebmaster"
+    assignees:
+      - "moreirawebmaster"
+    commit-message:
+      prefix: "⬆️ deps"
+      prefix-development: "⬆️ deps-dev"
+      include: "scope"
+    labels:
+      - "dependencies"
+      - "nodejs"
+      - "automated"
+    allow:
+      - dependency-type: "direct"
+      - dependency-type: "indirect"
+
+  # GitHub Actions (workflows)
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "11:00"
+      timezone: "America/Sao_Paulo"
+    open-pull-requests-limit: 3
+    target-branch: "main"
+    reviewers:
+      - "moreirawebmaster"
+    assignees:
+      - "moreirawebmaster"
+    commit-message:
+      prefix: "⬆️ ci"
+      include: "scope"
+    labels:
+      - "dependencies"
+      - "github-actions"
+      - "automated"

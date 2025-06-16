@@ -1,0 +1,89 @@
+name: 🤖 Dependabot Auto-merge
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: write
+  pull-requests: write
+  checks: read
+
+jobs:
+  auto-merge:
+    name: 🔄 Auto-merge Dependabot PRs
+    runs-on: ubuntu-latest
+    if: github.actor == 'dependabot[bot]'
+    
+    steps:
+    - name: 📥 Checkout code
+      uses: actions/checkout@v4
+
+    - name: 🎯 Setup Dart
+      uses: dart-lang/setup-dart@v1
+
+    - name: 📦 Get dependencies
+      run: dart pub get
+
+    - name: 🔍 Analyze code
+      run: dart analyze
+
+    - name: 🧪 Run tests
+      run: dart test
+
+    - name: 📊 Check PR details
+      id: pr-details
+      run: |
+        # Verificar se é update patch ou minor (seguro para auto-merge)
+        if echo "${{ github.event.pull_request.title }}" | grep -E "(patch|minor)" > /dev/null; then
+          echo "safe_update=true" >> $GITHUB_OUTPUT
+          echo "✅ Safe update detected (patch/minor)"
+        else
+          echo "safe_update=false" >> $GITHUB_OUTPUT
+          echo "⚠️ Major update detected - manual review required"
+        fi
+
+    - name: ✅ Auto-approve PR
+      if: steps.pr-details.outputs.safe_update == 'true'
+      run: |
+        gh pr review --approve "${{ github.event.pull_request.number }}" \
+          --body "✅ Auto-approved by Dependabot workflow after successful tests"
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: 🔄 Auto-merge PR
+      if: steps.pr-details.outputs.safe_update == 'true'
+      run: |
+        gh pr merge "${{ github.event.pull_request.number }}" \
+          --auto \
+          --squash \
+          --delete-branch
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: 💬 Comment on major updates
+      if: steps.pr-details.outputs.safe_update == 'false'
+      run: |
+        gh pr comment "${{ github.event.pull_request.number }}" \
+          --body "⚠️ **Major update detected**
+          
+          This PR contains major version updates that require manual review.
+          
+          📋 **Please verify:**
+          - Breaking changes in changelog
+          - Compatibility with current code
+          - Test coverage for new features
+          
+          After review, you can merge manually."
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: 🏷️ Add labels
+      run: |
+        if [ "${{ steps.pr-details.outputs.safe_update }}" == "true" ]; then
+          gh pr edit "${{ github.event.pull_request.number }}" --add-label "auto-merged"
+        else
+          gh pr edit "${{ github.event.pull_request.number }}" --add-label "needs-review"
+        fi
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} 

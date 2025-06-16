@@ -275,6 +275,13 @@ O projeto possui pipeline automatizada que:
 - Executa `dart test`
 - Comenta automaticamente no PR com resultados
 
+#### 🤖 Dependabot (Atualizações Automáticas):
+- **Dependências Dart**: Verificação semanal (segundas 09:00)
+- **Dependências Node.js**: Verificação semanal (segundas 10:00)  
+- **GitHub Actions**: Verificação semanal (segundas 11:00)
+- **Auto-merge**: Updates patch/minor aprovados automaticamente
+- **Review manual**: Updates major requerem aprovação
+
 #### 🚀 Para Push na Main:
 - Executa testes completos
 - **Versionamento automático** (bump patch)
