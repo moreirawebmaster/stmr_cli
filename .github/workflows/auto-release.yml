@@ -150,12 +150,12 @@ jobs:
         # Create tag
         git config user.name "github-actions[bot]"
         git config user.email "github-actions[bot]@users.noreply.github.com"
-        git tag -a "v$VERSION" -m "Release v$VERSION"
+        git tag -a "v$VERSION" -m "v$VERSION"
         git push origin "v$VERSION"
         
-        # Create release with auto-generated notes
+        # Create release with clean title
         gh release create "v$VERSION" \
-          --title "🚀 Release v$VERSION" \
+          --title "v$VERSION" \
           --generate-notes \
           --latest
 
