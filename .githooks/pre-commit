@@ -24,6 +24,12 @@ if [ $ANALYZE_EXIT_CODE -ne 0 ]; then
     exit 1
 fi
 
+# Verifica se a análise passou sem problemas
+if echo "$ANALYZE_OUTPUT" | grep -q "No issues found!"; then
+    echo "✅ Análise de código passou - commit autorizado!"
+    exit 0
+fi
+
 # Verifica se existem apenas warnings de avoid_print em arquivos tool/
 if echo "$ANALYZE_OUTPUT" | grep -q "avoid_print" && echo "$ANALYZE_OUTPUT" | grep -q "tool/"; then
     # Se só tem warnings de avoid_print em tool/, permite o commit
@@ -33,8 +39,8 @@ if echo "$ANALYZE_OUTPUT" | grep -q "avoid_print" && echo "$ANALYZE_OUTPUT" | gr
     fi
 fi
 
-# Se chegou até aqui e tem algum output, significa que há problemas
-if [ -n "$ANALYZE_OUTPUT" ]; then
+# Se chegou até aqui e tem algum output com problemas, rejeita
+if echo "$ANALYZE_OUTPUT" | grep -q "info\|warning\|error"; then
     echo ""
     echo "❌ COMMIT REJEITADO!"
     echo ""
