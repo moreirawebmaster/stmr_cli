@@ -1,7 +1,7 @@
 name: stmr_cli
 description: STMR CLI - Ferramenta de linha de comando para simplificar o desenvolvimento Flutter
 
-version: 1.0.18
+version: 1.0.19
 
 environment:
   sdk: ">=3.4.0 <4.0.0"
