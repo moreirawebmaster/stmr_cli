@@ -8,12 +8,12 @@ void main() async {
   final logger = Logger();
 
   if (!await _isMainBranch()) {
-    logger.warn('Operação apenas permitida na branch main');
+    logger.warn('⚠️  Sincronização apenas permitida na branch main');
     return;
   }
 
   logger
-    ..info('🚀 Iniciando sincronização...')
+    ..info('🚀 Iniciando sincronização com repositório remoto...')
     ..info('📤 Fazendo push das mudanças...');
 
   final pushResult = await Process.run('git', ['push']);
@@ -42,10 +42,12 @@ void main() async {
 
   final statusResult = await Process.run('git', ['status', '--porcelain']);
   if (statusResult.stdout.toString().trim().isNotEmpty) {
-    logger.warn('Existem alterações não commitadas');
+    logger.warn('⚠️  Existem alterações não commitadas');
   } else {
     logger.info('✅ Repositório está limpo e sincronizado');
   }
+
+  logger.info('🎉 Sincronização completa!');
 }
 
 Future<bool> _isMainBranch() async {
@@ -54,8 +56,8 @@ Future<bool> _isMainBranch() async {
     return result.stdout.toString().trim() == 'main';
   } catch (e) {
     Logger()
-      ..err('Erro ao verificar branch: $e')
-      ..err('Continuando com verificação padrão...');
+      ..err('❌ Erro ao verificar branch: $e')
+      ..warn('⚠️  Continuando com verificação padrão...');
     return false;
   }
 }
