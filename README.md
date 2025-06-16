@@ -72,6 +72,93 @@ O projeto usa **Husky** para hooks automáticos que garantem qualidade de códig
 - **Status**: Desabilitado (versionamento delegado para CI/CD)
 - **Função**: Apenas informa sobre a mudança de responsabilidade
 
+#### 🔧 Como o Husky Configura os Git Hooks
+
+O **Husky** funciona redirecionando os hooks do Git para seus próprios scripts:
+
+##### **1. Configuração Automática do Git**
+```bash
+# Quando você executa 'npm run prepare', o Husky configura:
+git config core.hooksPath .husky/_
+```
+
+##### **2. Estrutura de Hooks**
+```
+.husky/
+├── _/                    # Hooks internos do Husky
+│   ├── husky.sh         # Script principal (deprecated)
+│   ├── h                # Helper script atual
+│   ├── pre-commit       # Redirecionador para .husky/pre-commit
+│   ├── pre-push         # Redirecionador para .husky/pre-push
+│   └── ...              # Outros hooks disponíveis
+├── pre-commit           # SEU script de pre-commit
+└── pre-push             # SEU script de pre-push
+```
+
+##### **3. Fluxo de Execução**
+```
+git commit
+    ↓
+Git executa: .husky/_/pre-commit
+    ↓
+Husky helper (.husky/_/h) executa: .husky/pre-commit
+    ↓
+SEU script: dart analyze
+    ↓
+✅ Sucesso: commit prossegue
+❌ Falha: commit bloqueado
+```
+
+##### **4. Verificação da Configuração**
+```bash
+# Ver onde o Git está buscando os hooks
+git config core.hooksPath
+# Output: .husky/_
+
+# Ver hooks padrão do Git (não utilizados)
+ls .git/hooks/
+# Output: *.sample (arquivos de exemplo)
+
+# Ver hooks ativos do Husky
+ls .husky/
+# Output: pre-commit, pre-push, _/
+```
+
+##### **5. Diferença: Husky vs Git Nativo**
+
+| Aspecto | Git Nativo | Husky |
+|---------|------------|-------|
+| **Localização** | `.git/hooks/` | `.husky/` |
+| **Versionamento** | ❌ Não versionado | ✅ Versionado no repo |
+| **Compartilhamento** | ❌ Manual | ✅ Automático |
+| **Configuração** | Manual por dev | `npm run prepare` |
+| **Manutenção** | Individual | Centralizada |
+
+##### **6. Comandos de Configuração**
+```bash
+# Instalar e configurar Husky (automático)
+npm install          # Instala Husky
+npm run prepare      # Configura git config core.hooksPath
+
+# Verificar configuração
+git config core.hooksPath    # Deve mostrar: .husky/_
+ls .husky/_/                 # Ver hooks internos
+ls .husky/                   # Ver seus scripts
+
+# Resetar configuração (se necessário)
+git config --unset core.hooksPath  # Remove configuração
+rm -rf .husky/_                     # Remove hooks internos
+npm run prepare                     # Reconfigura
+```
+
+##### **7. Backup: Hooks Git Nativos**
+O projeto também mantém hooks alternativos em `.githooks/` como backup:
+```bash
+# Se Husky não funcionar, use hooks Git nativos:
+git config core.hooksPath .githooks
+chmod +x .githooks/pre-commit
+```
+
 ### 🔄 Fluxo de Desenvolvimento
 
 ```bash
@@ -122,6 +209,50 @@ npm run prepare
 # Verificar permissões
 chmod +x .husky/pre-commit
 chmod +x .husky/pre-push
+```
+
+#### Configuração de Hooks Corrompida
+```bash
+# Verificar configuração atual
+git config core.hooksPath
+# Deve mostrar: .husky/_
+
+# Se estiver incorreto, reconfigurar
+git config --unset core.hooksPath
+npm run prepare
+
+# Verificar se hooks internos existem
+ls .husky/_/
+# Deve mostrar: h, pre-commit, pre-push, etc.
+
+# Se pasta _/ não existir, reinstalar
+rm -rf .husky/_
+npm run prepare
+```
+
+#### Hooks Não Executando
+```bash
+# Testar hook manualmente
+.husky/pre-commit
+# Deve executar: dart analyze
+
+# Verificar se Git está usando Husky
+git config core.hooksPath
+# Output esperado: .husky/_
+
+# Se não estiver, reconfigurar
+npm run prepare
+git config core.hooksPath  # Verificar novamente
+```
+
+#### Fallback para Git Nativo
+```bash
+# Se Husky falhar completamente, usar hooks nativos
+git config core.hooksPath .githooks
+chmod +x .githooks/pre-commit
+
+# Para voltar ao Husky
+git config core.hooksPath .husky/_
 ```
 
 #### Problemas de Dependências
