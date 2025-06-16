@@ -1,3 +1,22 @@
+# CONFIGURAÇÃO DE BRANCH PROTECTION NECESSÁRIA:
+# 
+# OPÇÃO 1 (Recomendada): Criar Personal Access Token
+# 1. GitHub → Settings → Developer settings → Personal access tokens → Fine-grained tokens
+# 2. Criar token com permissões: Contents (write), Metadata (read), Pull requests (write)
+# 3. Adicionar como secret: ADMIN_TOKEN
+#
+# OPÇÃO 2: Configurar Branch Protection Rules
+# 1. GitHub → Settings → Branches → Branch protection rules
+# 2. Editar regra da branch 'main'
+# 3. Em "Restrict pushes that create files", marcar:
+#    ☑️ "Allow specified actors to bypass required pull requests"
+# 4. Adicionar: github-actions[bot]
+#
+# OPÇÃO 3: Usar GitHub App (Mais seguro para empresas)
+# 1. Criar GitHub App com permissões necessárias
+# 2. Instalar no repositório
+# 3. Usar app token no workflow
+
 name: CI/CD Pipeline
 
 on:
@@ -47,7 +66,7 @@ jobs:
     - name: 📥 Checkout code
       uses: actions/checkout@v4
       with:
-        token: ${{ secrets.GITHUB_TOKEN }}
+        token: ${{ secrets.ADMIN_TOKEN || secrets.GITHUB_TOKEN }}
         fetch-depth: 0
 
     - name: 🎯 Setup Dart
@@ -101,6 +120,8 @@ jobs:
 
     - name: 💾 Commit version bump
       if: steps.version_check.outputs.needs_bump == 'true'
+      env:
+        GITHUB_TOKEN: ${{ secrets.ADMIN_TOKEN || secrets.GITHUB_TOKEN }}
       run: |
         NEW_VERSION="${{ steps.bump_version.outputs.new_version }}"
         
