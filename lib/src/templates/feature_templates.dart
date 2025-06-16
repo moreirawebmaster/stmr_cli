@@ -3,8 +3,7 @@ import 'package:recase/recase.dart';
 /// Templates para geração de arquivos de features
 class FeatureTemplates {
   /// Gera o template do binding da feature
-  static String binding(String featureNamePascal, String featureNameSnake) {
-    return '''import 'package:engine/lib.dart';
+  static String binding(final String featureNamePascal, final String featureNameSnake) => '''import 'package:engine/lib.dart';
 import '../presentations/controllers/${featureNameSnake}_controller.dart';
 import '../repositories/${featureNameSnake}_repository.dart';
 
@@ -15,11 +14,9 @@ class ${featureNamePascal}Binding extends EngineBaseBinding {
     register.lazyPut<${featureNamePascal}Controller>(() => ${featureNamePascal}Controller());
   }
 }''';
-  }
 
   /// Gera o template do model da feature
-  static String model(String featureNamePascal, String featureNameSnake) {
-    return '''import 'package:equatable/equatable.dart';
+  static String model(final String featureNamePascal, final String featureNameSnake) => '''import 'package:equatable/equatable.dart';
 
 class ${featureNamePascal}Model extends Equatable {
   const ${featureNamePascal}Model({
@@ -63,11 +60,9 @@ class ${featureNamePascal}Model extends Equatable {
   @override
   List<Object?> get props => [id, name, isActive];
 }''';
-  }
 
   /// Gera o template do controller da feature
-  static String controller(String featureNamePascal, String featureNameSnake) {
-    return '''import 'package:engine/lib.dart';
+  static String controller(final String featureNamePascal, final String featureNameSnake) => '''import 'package:engine/lib.dart';
 import '../models/${featureNameSnake}_model.dart';
 import '../repositories/${featureNameSnake}_repository.dart';
 import '../keys/${featureNameSnake}_keys.dart';
@@ -145,11 +140,9 @@ class ${featureNamePascal}Controller extends EngineBaseController {
     );
   }
 }''';
-  }
 
   /// Gera o template da page da feature
-  static String page(String featureNamePascal, String featureNameSnake) {
-    return '''import 'package:flutter/material.dart';
+  static String page(final String featureNamePascal, final String featureNameSnake) => '''import 'package:flutter/material.dart';
 import 'package:engine/lib.dart';
 import '../controllers/${featureNameSnake}_controller.dart';
 import '../keys/${featureNameSnake}_keys.dart';
@@ -215,11 +208,9 @@ class ${featureNamePascal}Page extends EngineBasePage<${featureNamePascal}Contro
     });
   }
 }''';
-  }
 
   /// Gera o template do repository da feature
-  static String repository(String featureNamePascal, String featureNameSnake) {
-    return '''import 'package:engine/lib.dart';
+  static String repository(final String featureNamePascal, final String featureNameSnake) => '''import 'package:engine/lib.dart';
 
 /// Interface para o repositório $featureNamePascal
 abstract class I${featureNamePascal}Repository {
@@ -300,11 +291,9 @@ class ${featureNamePascal}Repository extends EngineBaseRepository implements I${
     }
   }
 }''';
-  }
 
   /// Gera o template das keys da feature
-  static String keys(String featureNamePascal, String featureNameSnake) {
-    return '''import 'package:flutter/material.dart';
+  static String keys(final String featureNamePascal, final String featureNameSnake) => '''import 'package:flutter/material.dart';
 
 class ${featureNamePascal}Keys {
   static const String _prefix = '$featureNameSnake';
@@ -329,11 +318,9 @@ class ${featureNamePascal}Keys {
   static const String errorTitleKey = '\${_prefix}_error_title';
   static const String successTitleKey = '\${_prefix}_success_title';
 }''';
-  }
 
   /// Gera o template das traduções da feature
-  static String translate(String featureNamePascal, String featureNameSnake) {
-    return '''/// Traduções para a feature $featureNamePascal
+  static String translate(final String featureNamePascal, final String featureNameSnake) => '''/// Traduções para a feature $featureNamePascal
 class ${featureNamePascal}Translate {
   static const String _prefix = '$featureNameSnake';
   
@@ -386,11 +373,9 @@ class ${featureNamePascal}Translate {
     'es_ES': esES,
   };
 }''';
-  }
 
   /// Gera o template do arquivo de rotas para módulos
-  static String routes(String moduleNamePascal, String moduleNameSnake) {
-    return '''import 'package:engine/lib.dart';
+  static String routes(final String moduleNamePascal, final String moduleNameSnake) => '''import 'package:engine/lib.dart';
 import 'presentations/pages/${moduleNameSnake}_page.dart';
 import 'bindings/${moduleNameSnake}_binding.dart';
 
@@ -407,11 +392,9 @@ class ${moduleNamePascal}Routes {
     ),
   ];
 }''';
-  }
 
   /// Gera o template do arquivo de bindings
-  static String bindings(String moduleNamePascal, String moduleNameSnake) {
-    return '''import 'package:engine/lib.dart';
+  static String bindings(final String moduleNamePascal, final String moduleNameSnake) => '''import 'package:engine/lib.dart';
 import 'presentations/controllers/${moduleNameSnake}_controller.dart';
 
 /// Bindings do módulo $moduleNamePascal
@@ -423,11 +406,9 @@ class ${moduleNamePascal}Bindings extends EngineBaseBinding {
     );
   }
 }''';
-  }
 
   /// Gera o template do arquivo de constantes
-  static String constants(String moduleNamePascal) {
-    return '''/// Constantes do módulo $moduleNamePascal
+  static String constants(final String moduleNamePascal) => '''/// Constantes do módulo $moduleNamePascal
 class ${moduleNamePascal}Constants {
   const ${moduleNamePascal}Constants._();
 
@@ -440,5 +421,4 @@ class ${moduleNamePascal}Constants {
   static const Duration requestTimeout = Duration(seconds: 30);
   static const Duration connectionTimeout = Duration(seconds: 10);
 }''';
-  }
 }

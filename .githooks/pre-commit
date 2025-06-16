@@ -1,0 +1,51 @@
+#!/bin/bash
+
+echo "🔍 Verificando qualidade do código com dart analyze..."
+
+# Executa dart analyze e captura a saída
+ANALYZE_OUTPUT=$(dart analyze 2>&1)
+ANALYZE_EXIT_CODE=$?
+
+if [ $ANALYZE_EXIT_CODE -ne 0 ]; then
+    echo ""
+    echo "❌ COMMIT REJEITADO!"
+    echo ""
+    echo "🚨 O código possui problemas de lint que devem ser corrigidos antes do commit:"
+    echo ""
+    echo "$ANALYZE_OUTPUT"
+    echo ""
+    echo "📋 Para corrigir:"
+    echo "   1. Execute: dart analyze"
+    echo "   2. Corrija todos os problemas listados"
+    echo "   3. Tente fazer commit novamente"
+    echo ""
+    echo "💡 Lembre-se: Nunca commitamos código com warnings, erros ou alertas de lint!"
+    echo ""
+    exit 1
+fi
+
+# Verifica se existem apenas warnings de avoid_print em arquivos tool/
+if echo "$ANALYZE_OUTPUT" | grep -q "avoid_print" && echo "$ANALYZE_OUTPUT" | grep -q "tool/"; then
+    # Se só tem warnings de avoid_print em tool/, permite o commit
+    if ! echo "$ANALYZE_OUTPUT" | grep -v "tool/" | grep -q "info\|warning\|error"; then
+        echo "✅ Análise passou - apenas warnings de avoid_print em ferramentas (aceitável)"
+        exit 0
+    fi
+fi
+
+# Se chegou até aqui e tem algum output, significa que há problemas
+if [ -n "$ANALYZE_OUTPUT" ]; then
+    echo ""
+    echo "❌ COMMIT REJEITADO!"
+    echo ""
+    echo "🚨 Problemas de lint encontrados:"
+    echo ""
+    echo "$ANALYZE_OUTPUT"
+    echo ""
+    echo "📋 Corrija todos os problemas antes de fazer commit."
+    echo ""
+    exit 1
+fi
+
+echo "✅ Análise de código passou - commit autorizado!"
+exit 0 

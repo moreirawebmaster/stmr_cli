@@ -2,131 +2,121 @@
 
 import 'dart:io';
 
-import 'package:yaml/yaml.dart';
+import 'package:mason_logger/mason_logger.dart';
 
-void main(List<String> args) async {
-  try {
-    // Verifica se está na branch main
-    final branchResult = await Process.run('git', ['branch', '--show-current']);
-    final currentBranch = branchResult.stdout.toString().trim();
+void main() async {
+  final logger = Logger();
 
-    if (currentBranch != 'main') {
-      _log('⚠️  Post-push actions apenas na branch main. Branch atual: $currentBranch');
-      exit(0);
-    }
-
-    // Lê a versão atual do pubspec.yaml
-    final pubspecFile = File('pubspec.yaml');
-    if (!pubspecFile.existsSync()) {
-      _log('❌ Arquivo pubspec.yaml não encontrado');
-      exit(1);
-    }
-
-    final pubspecContent = await pubspecFile.readAsString();
-    final yaml = loadYaml(pubspecContent) as Map<dynamic, dynamic>;
-
-    final currentVersion = yaml['version'] as String?;
-    if (currentVersion == null) {
-      _log('❌ Versão não encontrada no pubspec.yaml');
-      exit(1);
-    }
-
-    _log('🚀 Executando ações pós-push para versão $currentVersion');
-
-    // 1. Criar tag da versão
-    await _createTag(currentVersion);
-
-    // 2. Criar release no GitHub com release notes
-    await _createGitHubRelease(currentVersion);
-
-    _log('✅ Todas as ações pós-push concluídas com sucesso!');
-  } catch (e) {
-    _log('❌ Erro nas ações pós-push: $e');
-    exit(1);
-  }
-}
-
-/// Cria tag da versão atual
-Future<void> _createTag(String version) async {
-  _log('🏷️  Criando tag v$version...');
-
-  // Verifica se a tag já existe
-  final tagCheckResult = await Process.run('git', ['tag', '-l', 'v$version']);
-
-  if (tagCheckResult.stdout.toString().trim().isNotEmpty) {
-    _log('⚠️  Tag v$version já existe, pulando criação');
+  if (!await _isMainBranch()) {
+    logger.warn('Post-push apenas na branch main');
     return;
   }
 
-  // Cria a tag
-  final tagResult = await Process.run('git', [
+  final version = await _getCurrentVersion();
+  if (version == null) {
+    logger.err('Versão não encontrada no pubspec.yaml');
+    return;
+  }
+
+  logger.info('🏷️  Versão detectada: $version');
+
+  await _createAndPushTag(logger, version);
+  await _createGitHubRelease(logger, version);
+
+  logger.info('🎉 Post-push concluído com sucesso!');
+}
+
+Future<void> _createAndPushTag(final Logger logger, final String version) async {
+  final tagName = 'v$version';
+
+  final existingTags = await Process.run('git', ['tag', '-l', tagName]);
+  if (existingTags.stdout.toString().trim().isNotEmpty) {
+    logger.warn('Tag $tagName já existe, pulando criação');
+    return;
+  }
+
+  logger
+    ..info('🚀 Auto-versioning and publishing...')
+    ..info('🏷️  Criando tag $tagName...');
+
+  final createTagResult = await Process.run('git', [
     'tag',
     '-a',
-    'v$version',
+    tagName,
     '-m',
-    'Release v$version',
+    'Versão $version',
   ]);
 
-  if (tagResult.exitCode == 0) {
-    _log('✅ Tag v$version criada localmente');
-
-    // Push da tag
-    final pushTagResult = await Process.run('git', ['push', 'origin', 'v$version']);
-
-    if (pushTagResult.exitCode == 0) {
-      _log('✅ Tag v$version enviada para o repositório');
-    } else {
-      _log('❌ Erro ao enviar tag: ${pushTagResult.stderr}');
-    }
-  } else {
-    _log('❌ Erro ao criar tag: ${tagResult.stderr}');
+  if (createTagResult.exitCode != 0) {
+    logger.err('Erro ao criar tag: ${createTagResult.stderr}');
+    return;
   }
+
+  final pushTagResult = await Process.run('git', ['push', 'origin', tagName]);
+  if (pushTagResult.exitCode != 0) {
+    logger.err('Erro ao fazer push da tag: ${pushTagResult.stderr}');
+    return;
+  }
+
+  logger.info('✅ Tag $tagName criada e enviada com sucesso!');
 }
 
-/// Cria release no GitHub com release notes automáticas
-Future<void> _createGitHubRelease(String version) async {
-  _log('📋 Criando release no GitHub com release notes automáticas...');
+Future<void> _createGitHubRelease(final Logger logger, final String version) async {
+  final tagName = 'v$version';
 
-  // Verifica se GitHub CLI está disponível
-  final ghCheckResult = await Process.run('which', ['gh']);
-
-  if (ghCheckResult.exitCode != 0) {
-    _log('⚠️  GitHub CLI (gh) não encontrado. Instale com: brew install gh');
-    _log('📝 Criação de release pulada - tag v$version está disponível');
+  final ghAvailable = await Process.run('which', ['gh']);
+  if (ghAvailable.exitCode != 0) {
+    logger.warn('GitHub CLI não disponível, pulando criação de release');
     return;
   }
 
-  // Verifica se está autenticado
-  final authResult = await Process.run('gh', ['auth', 'status']);
-
-  if (authResult.exitCode != 0) {
-    _log('⚠️  GitHub CLI não autenticado. Execute: gh auth login');
-    _log('📝 Criação de release pulada - tag v$version está disponível');
+  final ghAuth = await Process.run('gh', ['auth', 'status']);
+  if (ghAuth.exitCode != 0) {
+    logger.warn('GitHub CLI não autenticado, pulando criação de release');
     return;
   }
 
-  // Cria release com release notes automáticas
-  final releaseResult = await Process.run('gh', [
+  logger.info('📦 Criando release no GitHub...');
+
+  final result = await Process.run('gh', [
     'release',
     'create',
-    'v$version',
+    tagName,
     '--title',
-    'Release v$version',
-    '--generate-notes',
-    '--latest',
+    'Versão $version',
+    '--notes',
+    'Release automático da versão $version',
   ]);
 
-  if (releaseResult.exitCode == 0) {
-    _log('✅ Release v$version criado no GitHub com release notes automáticas');
-    _log('🔗 Confira em: https://github.com/moreirawebmaster/stmr_cli/releases/tag/v$version');
+  if (result.exitCode == 0) {
+    logger
+      ..info('✅ Release criado com sucesso!')
+      ..info('🔗 https://github.com/moreirawebmaster/stmr_cli/releases/tag/$tagName');
   } else {
-    _log('❌ Erro ao criar release: ${releaseResult.stderr}');
-    _log('📝 Tag v$version ainda está disponível para release manual');
+    logger.warn('Erro ao criar release: ${result.stderr}');
   }
 }
 
-/// Log helper para evitar warnings de lint
-void _log(String message) {
-  // ignore: avoid_print
-  print(message);
+Future<String?> _getCurrentVersion() async {
+  final pubspecFile = File('pubspec.yaml');
+  if (!pubspecFile.existsSync()) {
+    return null;
+  }
+
+  final content = await pubspecFile.readAsString();
+  final versionMatch = RegExp(r'version: (\d+\.\d+\.\d+)').firstMatch(content);
+
+  return versionMatch?.group(1);
+}
+
+Future<bool> _isMainBranch() async {
+  try {
+    final result = await Process.run('git', ['branch', '--show-current']);
+    return result.stdout.toString().trim() == 'main';
+  } catch (e) {
+    Logger()
+      ..err('Erro ao verificar branch: $e')
+      ..warn('Continuando com verificação padrão...');
+    return false;
+  }
 }

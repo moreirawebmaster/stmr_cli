@@ -12,31 +12,17 @@ class CreateCommand implements ICommand {
   final Logger _logger;
 
   @override
-  ArgParser build() {
-    return ArgParser()
-      ..addFlag('help', abbr: 'h', help: 'Mostra informações de ajuda')
-      ..addFlag('version', abbr: 'v', help: 'Mostra a versão do CLI')
-      ..addOption('name', help: 'Nome do projeto (substitui "skeleton" nos arquivos)')
-      ..addOption('org', help: 'Organização do projeto (substitui "tech.stmr" nos arquivos)', defaultsTo: 'tech.stmr');
-  }
+  ArgParser build() => ArgParser()
+    ..addFlag('help', abbr: 'h', help: 'Mostra informações de ajuda')
+    ..addFlag('version', abbr: 'v', help: 'Mostra a versão do CLI')
+    ..addOption('name', help: 'Nome do projeto (substitui "skeleton" nos arquivos)')
+    ..addOption('org', help: 'Organização do projeto (substitui "tech.stmr" nos arquivos)', defaultsTo: 'tech.stmr');
 
   @override
-  Future<void> run(ArgResults command) async {
+  Future<void> run(final ArgResults command) async {
     // Verificar se é pedido de ajuda
     if (command['help'] as bool) {
-      _logger.info('Uso: stmr create <nome_do_projeto> [--name nome] [--org organizacao]');
-      _logger.info('');
-      _logger.info('Argumentos:');
-      _logger.info('  <nome_do_projeto>  Nome do diretório do projeto');
-      _logger.info('');
-      _logger.info('Opções:');
-      _logger.info('  --name             Nome do projeto (substitui "skeleton" nos arquivos)');
-      _logger.info('  --org              Organização (substitui "tech.stmr") [padrão: tech.stmr]');
-      _logger.info('  -h, --help         Mostra esta ajuda');
-      _logger.info('');
-      _logger.info('Exemplos:');
-      _logger.info('  stmr create meu_app');
-      _logger.info('  stmr create meu_app --name "Meu App" --org com.minhaempresa');
+      _showHelp();
       return;
     }
 
@@ -52,9 +38,10 @@ class CreateCommand implements ICommand {
       projectDir = args.first;
       finalProjectName = projectName ?? args.first;
     } else {
-      _logger.err('❌ Nome do projeto é obrigatório');
-      _logger.info('Uso: stmr create <nome_do_projeto> [--name nome] [--org organizacao]');
-      _logger.info('Exemplo: stmr create meu_app --name "Meu App" --org com.minhaempresa');
+      _logger
+        ..err('❌ Nome do projeto é obrigatório')
+        ..info('Uso: stmr create <nome_do_projeto> [--name nome] [--org organizacao]')
+        ..info('Exemplo: stmr create meu_app --name "Meu App" --org com.minhaempresa');
       return;
     }
 
@@ -65,9 +52,10 @@ class CreateCommand implements ICommand {
       return;
     }
 
-    _logger.info('🚀 Criando projeto $finalProjectName...');
-    _logger.info('📁 Diretório: $projectDir');
-    _logger.info('🏢 Organização: $organization');
+    _logger
+      ..info('🚀 Criando projeto $finalProjectName...')
+      ..info('📁 Diretório: $projectDir')
+      ..info('🏢 Organização: $organization');
 
     try {
       // Clonar o skeleton do GitHub
@@ -79,12 +67,13 @@ class CreateCommand implements ICommand {
       // Limpar arquivos desnecessários
       await _cleanupProject(projectDir);
 
-      _logger.success('✅ Projeto $finalProjectName criado com sucesso!');
-      _logger.info('');
-      _logger.info('Próximos passos:');
-      _logger.info('  1. cd $projectDir');
-      _logger.info('  2. flutter pub get');
-      _logger.info('  3. stmr feature <nome_do_modulo>');
+      _logger
+        ..success('✅ Projeto $finalProjectName criado com sucesso!')
+        ..info('')
+        ..info('Próximos passos:')
+        ..info('  1. cd $projectDir')
+        ..info('  2. flutter pub get')
+        ..info('  3. stmr feature <nome_do_modulo>');
     } catch (e) {
       _logger.err('❌ Erro ao criar projeto: $e');
 
@@ -101,7 +90,7 @@ class CreateCommand implements ICommand {
   }
 
   /// Clona o skeleton do GitHub
-  Future<void> _cloneSkeleton(String projectDir) async {
+  Future<void> _cloneSkeleton(final String projectDir) async {
     _logger.info('📥 Clonando skeleton do GitHub...');
 
     final result = await Process.run(
@@ -118,10 +107,10 @@ class CreateCommand implements ICommand {
 
   /// Substitui os valores do projeto nos arquivos
   Future<void> _replaceProjectValues(
-    String projectDir,
-    String projectName,
-    String projectNameSnake,
-    String organization,
+    final String projectDir,
+    final String projectName,
+    final String projectNameSnake,
+    final String organization,
   ) async {
     _logger.info('🔄 Substituindo valores do projeto...');
 
@@ -146,7 +135,7 @@ class CreateCommand implements ICommand {
       final file = File('$projectDir/$filePath');
       if (file.existsSync()) {
         try {
-          String content = await file.readAsString();
+          var content = await file.readAsString();
 
           // Substituir "skeleton" pelo nome do projeto
           content = content.replaceAll('skeleton', projectNameSnake);
@@ -168,7 +157,7 @@ class CreateCommand implements ICommand {
   }
 
   /// Limpa arquivos desnecessários do projeto
-  Future<void> _cleanupProject(String projectDir) async {
+  Future<void> _cleanupProject(final String projectDir) async {
     _logger.info('🧹 Limpando arquivos desnecessários...');
 
     // Remover diretório .git
@@ -196,7 +185,8 @@ class CreateCommand implements ICommand {
   }
 
   /// Processa todos os arquivos Dart recursivamente substituindo imports e referências
-  Future<void> _processDartFiles(String projectDir, String projectNameSnake, String projectName) async {
+  Future<void> _processDartFiles(
+      final String projectDir, final String projectNameSnake, final String projectName) async {
     _logger.info('🔄 Processando arquivos Dart...');
 
     final libDir = Directory('$projectDir/lib');
@@ -214,12 +204,13 @@ class CreateCommand implements ICommand {
   }
 
   /// Processa arquivos Dart recursivamente em um diretório
-  Future<void> _processDartFilesInDirectory(Directory dir, String projectNameSnake, String projectName) async {
+  Future<void> _processDartFilesInDirectory(
+      final Directory dir, final String projectNameSnake, final String projectName) async {
     await for (final entity in dir.list(recursive: true)) {
       if (entity is File && entity.path.endsWith('.dart')) {
         try {
-          String content = await entity.readAsString();
-          bool changed = false;
+          var content = await entity.readAsString();
+          var changed = false;
 
           // Substituir imports que usam 'package:skeleton'
           if (content.contains('package:skeleton')) {
@@ -258,15 +249,17 @@ class CreateCommand implements ICommand {
   }
 
   /// Processa arquivos Kotlin e move diretórios conforme a nova organização
-  Future<void> _processKotlinFiles(String projectDir, String organization) async {
+  Future<void> _processKotlinFiles(final String projectDir, final String organization) async {
     final kotlinDir = Directory('$projectDir/android/app/src/main/kotlin');
-    if (!kotlinDir.existsSync()) return;
+    if (!kotlinDir.existsSync()) {
+      return;
+    }
 
     // Encontrar arquivos Kotlin recursivamente
     await for (final entity in kotlinDir.list(recursive: true)) {
       if (entity is File && entity.path.endsWith('.kt')) {
         try {
-          String content = await entity.readAsString();
+          var content = await entity.readAsString();
 
           // Substituir package
           content = content.replaceAll('tech.stmr.skeleton', '$organization.${projectDir.toLowerCase()}');
@@ -287,11 +280,13 @@ class CreateCommand implements ICommand {
   }
 
   /// Reorganiza os diretórios Kotlin conforme a nova organização
-  Future<void> _reorganizeKotlinDirectories(String projectDir, String organization) async {
+  Future<void> _reorganizeKotlinDirectories(final String projectDir, final String organization) async {
     final oldKotlinPath = '$projectDir/android/app/src/main/kotlin/tech/stmr/skeleton';
     final oldDir = Directory(oldKotlinPath);
 
-    if (!oldDir.existsSync()) return;
+    if (!oldDir.existsSync()) {
+      return;
+    }
 
     // Criar nova estrutura de diretórios
     final orgParts = organization.split('.');
@@ -320,5 +315,27 @@ class CreateCommand implements ICommand {
     } catch (e) {
       _logger.warn('  ⚠️  Erro ao reorganizar diretórios Kotlin: $e');
     }
+  }
+
+  void _showHelp() {
+    _logger
+      ..info('')
+      ..info('🚀 Comando CREATE - Criar projeto Flutter')
+      ..info('')
+      ..info('Uso: stmr create <nome-do-projeto> [flags]')
+      ..info('')
+      ..info('Flags:')
+      ..info('  --module, -m    Criar projeto com módulos específicos')
+      ..info('  --path, -p      Especificar diretório de destino')
+      ..info('  --features, -f  Lista de features separadas por vírgula')
+      ..info('  --force         Sobrescrever projeto existente')
+      ..info('  --dry-run       Simular criação sem modificar arquivos')
+      ..info('  --help, -h      Mostrar esta ajuda')
+      ..info('')
+      ..info('Exemplos:')
+      ..info('  stmr create meu_app')
+      ..info('  stmr create meu_app --path /caminho/destino')
+      ..info('  stmr create meu_app --features auth,profile,settings')
+      ..info('');
   }
 }

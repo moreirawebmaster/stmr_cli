@@ -4,7 +4,7 @@ description: STMR CLI - Ferramenta de linha de comando para simplificar o desenv
 version: 1.0.18
 
 environment:
-  sdk: ^3.0.0
+  sdk: ">=3.4.0 <4.0.0"
 
 executables:
   stmr:

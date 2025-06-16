@@ -1,22 +1,21 @@
 import 'dart:io';
 
 import 'package:mason_logger/mason_logger.dart';
+import 'package:stmr_cli/src/version.dart';
 import 'package:yaml/yaml.dart';
-
-import '../version.dart';
 
 /// Utilitários para trabalhar com pubspec.yaml
 class PubspecUtils {
   /// Obtém a versão do CLI de forma simples
-  static String getVersion() {
-    return cliVersion; // Usa sempre a versão compilada
-  }
+  static String getVersion() => cliVersion;
 
   /// Obtém versão do pubspec.yaml (para desenvolvimento)
   static String? getVersionFromPubspec() {
     try {
       final pubspecFile = File('pubspec.yaml');
-      if (!pubspecFile.existsSync()) return null;
+      if (!pubspecFile.existsSync()) {
+        return null;
+      }
 
       final pubspecContent = pubspecFile.readAsStringSync();
       final yaml = loadYaml(pubspecContent) as Map;
@@ -24,6 +23,15 @@ class PubspecUtils {
     } catch (e) {
       return null;
     }
+  }
+
+  /// Busca arquivo pubspec.yaml em diretório
+  static Future<File?> _searchPubspec(final Directory dir) async {
+    final pubspecFile = File('${dir.path}/pubspec.yaml');
+    if (pubspecFile.existsSync()) {
+      return pubspecFile;
+    }
+    return null;
   }
 
   /// Obtém versão remota do GitHub
@@ -43,4 +51,6 @@ class PubspecUtils {
     }
     return null;
   }
+
+  static Future<File?> findPubspecFile() async => await _searchPubspec(Directory.current);
 }

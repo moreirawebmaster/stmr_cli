@@ -1,8 +1,8 @@
 /// Templates para geração de pages, controllers, repositories e DTOs
 class GenerateTemplates {
   /// Gera o template de uma page que extende EngineBasePage
-  static String page(String pageNamePascal, String pageNameSnake, String moduleNameSnake) {
-    return '''import 'package:engine/lib.dart';
+  static String page(final String pageNamePascal, final String pageNameSnake, final String moduleNameSnake) =>
+      '''import 'package:engine/lib.dart';
 import 'package:flutter/material.dart';
 import 'package:design_system/lib.dart';
 
@@ -22,9 +22,9 @@ class ${pageNamePascal}Page extends EngineBasePage<${pageNamePascal}Controller> 
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const DSText(
+          const           DsText(
             'Página $pageNamePascal',
-            type: DSTextType.heading2,
+            type: DsTextType.heading2,
           ),
           const SizedBox(height: 16),
           Obx(() {
@@ -36,10 +36,10 @@ class ${pageNamePascal}Page extends EngineBasePage<${pageNamePascal}Controller> 
 
             if (controller.error.value != null) {
               return Center(
-                child: DSText(
+                child: DsText(
                   controller.error.value!,
-                  type: DSTextType.body1,
-                  color: DSColors.error,
+                  type: DsTextType.body1,
+                  color: DsColors.error,
                 ),
               );
             }
@@ -53,11 +53,11 @@ class ${pageNamePascal}Page extends EngineBasePage<${pageNamePascal}Controller> 
     );
   }
 }''';
-  }
 
   /// Gera o template de um controller que extende EngineBaseController
-  static String controller(String controllerNamePascal, String controllerNameSnake, String moduleNameSnake) {
-    return '''import 'package:engine/lib.dart';
+  static String controller(
+          final String controllerNamePascal, final String controllerNameSnake, final String moduleNameSnake) =>
+      '''import 'package:engine/lib.dart';
 
 /// Controller para $controllerNamePascal
 class ${controllerNamePascal}Controller extends EngineBaseController {
@@ -101,11 +101,11 @@ class ${controllerNamePascal}Controller extends EngineBaseController {
     await _loadData();
   }
 }''';
-  }
 
   /// Gera o template de um repository com interface e implementação
-  static String repository(String repositoryNamePascal, String repositoryNameSnake, String moduleNameSnake) {
-    return '''import 'package:engine/lib.dart';
+  static String repository(
+          final String repositoryNamePascal, final String repositoryNameSnake, final String moduleNameSnake) =>
+      '''import 'package:engine/lib.dart';
 
 /// Interface para o repositório $repositoryNamePascal
 abstract class I${repositoryNamePascal}Repository {
@@ -186,10 +186,9 @@ class ${repositoryNamePascal}Repository extends EngineBaseRepository implements 
     }
   }
 }''';
-  }
 
   /// Gera o template de um DTO baseado em um JSON
-  static String dto(String dtoNamePascal, String dtoNameSnake, Map<String, dynamic> jsonData) {
+  static String dto(final String dtoNamePascal, final String dtoNameSnake, final Map<String, dynamic> jsonData) {
     final constructorParams = _generateDtoConstructorParams(jsonData);
     final fromMapBody = _generateDtoFromMap(jsonData);
     final toMapBody = _generateDtoToMap(jsonData);
@@ -228,10 +227,10 @@ $properties
   }
 
   /// Gera as propriedades do DTO baseado no JSON
-  static String _generateDtoProperties(Map<String, dynamic> jsonData) {
+  static String _generateDtoProperties(final Map<String, dynamic> jsonData) {
     final buffer = StringBuffer();
 
-    jsonData.forEach((key, value) {
+    jsonData.forEach((final key, final value) {
       final type = _getDartType(value);
       buffer.writeln('  final $type $key;');
     });
@@ -240,10 +239,10 @@ $properties
   }
 
   /// Gera os parâmetros do construtor do DTO
-  static String _generateDtoConstructorParams(Map<String, dynamic> jsonData) {
+  static String _generateDtoConstructorParams(final Map<String, dynamic> jsonData) {
     final buffer = StringBuffer();
 
-    jsonData.forEach((key, value) {
+    jsonData.forEach((final key, final value) {
       buffer.writeln('    required this.$key,');
     });
 
@@ -251,28 +250,28 @@ $properties
   }
 
   /// Gera o código para o método fromMap
-  static String _generateDtoFromMap(Map<String, dynamic> jsonData) {
+  static String _generateDtoFromMap(final Map<String, dynamic> jsonData) {
     final buffer = StringBuffer();
 
-    jsonData.forEach((key, value) {
+    jsonData.forEach((final key, final value) {
       final dartType = _getDartType(value);
       final defaultValue = _getDefaultValue(value);
 
       if (value is Map) {
-        buffer.writeln('        $key: Map<String, dynamic>.from(map[\'$key\'] ?? {}),');
+        buffer.writeln("        $key: Map<String, dynamic>.from(map['$key'] ?? {}),");
       } else if (value is List) {
         if (value.isNotEmpty && value.first is Map) {
-          buffer.writeln('        $key: List<Map<String, dynamic>>.from(map[\'$key\'] ?? []),');
+          buffer.writeln("        $key: List<Map<String, dynamic>>.from(map['$key'] ?? []),");
         } else {
           final listType = _getListType(value);
-          buffer.writeln('        $key: List<$listType>.from(map[\'$key\'] ?? []),');
+          buffer.writeln("        $key: List<$listType>.from(map['$key'] ?? []),");
         }
       } else if (dartType == 'int') {
-        buffer.writeln('        $key: map[\'$key\']?.toInt() ?? $defaultValue,');
+        buffer.writeln("        $key: map['$key']?.toInt() ?? $defaultValue,");
       } else if (dartType == 'double') {
-        buffer.writeln('        $key: map[\'$key\']?.toDouble() ?? $defaultValue,');
+        buffer.writeln("        $key: map['$key']?.toDouble() ?? $defaultValue,");
       } else {
-        buffer.writeln('        $key: map[\'$key\'] ?? $defaultValue,');
+        buffer.writeln("        $key: map['$key'] ?? $defaultValue,");
       }
     });
 
@@ -280,21 +279,21 @@ $properties
   }
 
   /// Gera o código para o método toMap
-  static String _generateDtoToMap(Map<String, dynamic> jsonData) {
+  static String _generateDtoToMap(final Map<String, dynamic> jsonData) {
     final buffer = StringBuffer();
 
-    jsonData.forEach((key, value) {
-      buffer.writeln('        \'$key\': $key,');
+    jsonData.forEach((final key, final value) {
+      buffer.writeln("        '$key': $key,");
     });
 
     return buffer.toString();
   }
 
   /// Gera os parâmetros para o factory empty
-  static String _generateEmptyFactoryParams(Map<String, dynamic> jsonData) {
+  static String _generateEmptyFactoryParams(final Map<String, dynamic> jsonData) {
     final buffer = StringBuffer();
 
-    jsonData.forEach((key, value) {
+    jsonData.forEach((final key, final value) {
       final defaultValue = _getDefaultValue(value);
       buffer.writeln('        $key: $defaultValue,');
     });
@@ -303,10 +302,10 @@ $properties
   }
 
   /// Gera os parâmetros do método copyWith
-  static String _generateDtoCopyWithParams(Map<String, dynamic> jsonData) {
+  static String _generateDtoCopyWithParams(final Map<String, dynamic> jsonData) {
     final buffer = StringBuffer();
 
-    jsonData.forEach((key, value) {
+    jsonData.forEach((final key, final value) {
       final type = _getDartType(value);
       buffer.writeln('    $type? $key,');
     });
@@ -315,10 +314,10 @@ $properties
   }
 
   /// Gera o corpo do método copyWith
-  static String _generateDtoCopyWithBody(Map<String, dynamic> jsonData) {
+  static String _generateDtoCopyWithBody(final Map<String, dynamic> jsonData) {
     final buffer = StringBuffer();
 
-    jsonData.forEach((key, value) {
+    jsonData.forEach((final key, final value) {
       buffer.writeln('      $key: $key ?? this.$key,');
     });
 
@@ -326,33 +325,59 @@ $properties
   }
 
   /// Retorna o tipo Dart correspondente ao valor
-  static String _getDartType(dynamic value) {
-    if (value is String) return 'String';
-    if (value is int) return 'int';
-    if (value is double) return 'double';
-    if (value is bool) return 'bool';
+  static String _getDartType(final dynamic value) {
+    if (value is String) {
+      return 'String';
+    }
+    if (value is int) {
+      return 'int';
+    }
+    if (value is double) {
+      return 'double';
+    }
+    if (value is bool) {
+      return 'bool';
+    }
     if (value is List) {
-      if (value.isEmpty) return 'List<dynamic>';
+      if (value.isEmpty) {
+        return 'List<dynamic>';
+      }
       return 'List<${_getDartType(value.first)}>';
     }
-    if (value is Map) return 'Map<String, dynamic>';
+    if (value is Map) {
+      return 'Map<String, dynamic>';
+    }
     return 'dynamic';
   }
 
   /// Retorna o tipo da lista
-  static String _getListType(List<dynamic> list) {
-    if (list.isEmpty) return 'dynamic';
+  static String _getListType(final List<dynamic> list) {
+    if (list.isEmpty) {
+      return 'dynamic';
+    }
     return _getDartType(list.first);
   }
 
   /// Retorna o valor padrão para um tipo
-  static String _getDefaultValue(dynamic value) {
-    if (value is String) return "''";
-    if (value is int) return '0';
-    if (value is double) return '0.0';
-    if (value is bool) return 'false';
-    if (value is List) return '[]';
-    if (value is Map) return '{}';
+  static String _getDefaultValue(final dynamic value) {
+    if (value is String) {
+      return "''";
+    }
+    if (value is int) {
+      return '0';
+    }
+    if (value is double) {
+      return '0.0';
+    }
+    if (value is bool) {
+      return 'false';
+    }
+    if (value is List) {
+      return '[]';
+    }
+    if (value is Map) {
+      return '{}';
+    }
     return 'null';
   }
 }

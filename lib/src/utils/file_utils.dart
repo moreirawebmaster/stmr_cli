@@ -1,34 +1,33 @@
 import 'dart:io';
 
-import 'string_replacement.dart';
+import 'package:stmr_cli/src/utils/string_replacement.dart';
 
 /// Utilitários para manipulação de arquivos
 class FileUtils {
-  /// Substitui strings em um arquivo usando uma lista de substituições
-  static Future<void> replaceInFile(File file, List<StringReplacement> replacements) async {
-    if (!file.existsSync()) return;
+  /// Aplica substituições em um arquivo
+  static Future<void> applyReplacements(final String filePath, final List<StringReplacement> replacements) async {
+    final file = File(filePath);
+    if (!file.existsSync()) {
+      return;
+    }
 
-    String content = await file.readAsString();
+    var content = await file.readAsString();
 
     for (final replacement in replacements) {
-      content = content.replaceAll(replacement.from, replacement.to);
+      content = content.replaceAll(replacement.pattern, replacement.replacement);
     }
 
     await file.writeAsString(content);
   }
 
   /// Cria um diretório recursivamente
-  static Future<void> createDirectoryRecursive(String path) async {
+  static Future<void> createDirectoryRecursive(final String path) async {
     await Directory(path).create(recursive: true);
   }
 
   /// Verifica se um arquivo existe
-  static Future<bool> fileExists(String path) async {
-    return File(path).existsSync();
-  }
+  static Future<bool> fileExists(final String path) async => File(path).existsSync();
 
   /// Verifica se um diretório existe
-  static Future<bool> directoryExists(String path) async {
-    return Directory(path).existsSync();
-  }
+  static Future<bool> directoryExists(final String path) async => Directory(path).existsSync();
 }

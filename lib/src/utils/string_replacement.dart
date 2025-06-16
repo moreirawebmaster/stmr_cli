@@ -1,11 +1,14 @@
-/// Classe para representar uma substituição de string
+/// Representa uma substituição de string com padrão e substituição
 class StringReplacement {
-  /// Construtor para criar uma substituição
-  const StringReplacement(this.from, this.to);
+  /// Cria uma nova substituição de string
+  const StringReplacement({
+    required this.pattern,
+    required this.replacement,
+  });
 
-  /// String que será substituída
-  final String from;
+  /// Padrão a ser substituído
+  final String pattern;
 
-  /// String que substituirá
-  final String to;
+  /// Texto que substituirá o padrão
+  final String replacement;
 }

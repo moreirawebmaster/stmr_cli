@@ -1,8 +1,6 @@
-/// Templates para criação de projetos Flutter
 class CreateTemplates {
   /// Gera o template do arquivo pubspec.yaml
-  static String pubspec(String projectName, String projectNameSnake) {
-    return '''name: $projectNameSnake
+  static String pubspec(final String projectName, final String projectNameSnake) => '''name: $projectNameSnake
 description: A new Flutter project.
 publish_to: 'none'
 version: 1.0.0+1
@@ -40,18 +38,15 @@ flutter:
     - assets/images/
     - assets/icons/
 ''';
-  }
 
   /// Gera o template do arquivo main.dart
-  static String main(String projectName) {
-    return '''import 'package:engine/lib.dart';
+  static String main(final String projectName) => '''import 'package:engine/lib.dart';
 import 'package:flutter/material.dart';
 import 'package:design_system/lib.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   
-  // Inicializar serviços
   await Engine.initialize();
   
   runApp(const MyApp());
@@ -64,8 +59,8 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return GetMaterialApp(
       title: '$projectName',
-      theme: DSTheme.light,
-      darkTheme: DSTheme.dark,
+      theme: DsTheme.light,
+      darkTheme: DsTheme.dark,
       themeMode: ThemeMode.system,
       debugShowCheckedModeBanner: false,
       home: const HomePage(),
@@ -80,16 +75,55 @@ class HomePage extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const DSText('Home'),
+        title: const DsText('Home'),
       ),
       body: const Center(
-        child: DSText(
+        child: DsText(
           'Bem-vindo ao $projectName!',
-          type: DSTextType.heading1,
+          type: DsTextType.heading1,
         ),
       ),
     );
   }
 }''';
+
+  /// Gera template para app principal com Clean Architecture
+  static String initialAppFile(final String projectName) {
+    final capitalizedName = _capitalize(projectName);
+
+    return '''import 'package:engine/lib.dart';
+import 'package:flutter/material.dart';
+
+class ${capitalizedName}App extends StatelessWidget {
+  const ${capitalizedName}App({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return GetMaterialApp(
+      title: '$capitalizedName',
+      theme: ThemeData(
+        primarySwatch: Colors.blue,
+        visualDensity: VisualDensity.adaptivePlatformDensity,
+      ),
+      initialRoute: AppPages.INITIAL,
+      getPages: AppPages.routes,
+      initialBinding: InitialBinding(),
+    );
+  }
+}
+
+class InitialBinding extends EngineBaseBinding {
+  @override
+  void dependencies() {
+    
+  }
+}''';
+  }
+
+  static String _capitalize(final String text) {
+    if (text.isEmpty) {
+      return text;
+    }
+    return text[0].toUpperCase() + text.substring(1);
   }
 }

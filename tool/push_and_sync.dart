@@ -2,65 +2,60 @@
 
 import 'dart:io';
 
-void main(List<String> args) async {
-  try {
-    // Verifica se está na branch main
-    final branchResult = await Process.run('git', ['branch', '--show-current']);
-    final currentBranch = branchResult.stdout.toString().trim();
+import 'package:mason_logger/mason_logger.dart';
 
-    _log('🚀 Push and Sync na branch: $currentBranch');
+void main() async {
+  final logger = Logger();
 
-    // 1. Fazer push
-    _log('📤 Fazendo push...');
-    final pushResult = await Process.run('git', ['push', 'origin', currentBranch]);
+  if (!await _isMainBranch()) {
+    logger.warn('Operação apenas permitida na branch main');
+    return;
+  }
 
-    if (pushResult.exitCode != 0) {
-      _log('❌ Erro no push: ${pushResult.stderr}');
-      exit(1);
-    }
+  logger
+    ..info('🚀 Iniciando sincronização...')
+    ..info('📤 Fazendo push das mudanças...');
 
-    _log('✅ Push concluído com sucesso!');
+  final pushResult = await Process.run('git', ['push']);
+  if (pushResult.exitCode != 0) {
+    logger
+      ..err('❌ Erro no push:')
+      ..err(pushResult.stderr.toString());
+    return;
+  }
 
-    // 2. Aguardar alguns segundos para garantir que o remote foi atualizado
-    if (currentBranch == 'main') {
-      _log('⏳ Aguardando 3 segundos para sincronização...');
-      await Future.delayed(Duration(seconds: 3));
-    }
+  logger
+    ..info('✅ Push realizado com sucesso')
+    ..info('🔄 Sincronizando com remote...');
 
-    // 3. Fazer pull para sincronizar
-    _log('📥 Fazendo pull para sincronizar...');
-    final pullResult = await Process.run('git', ['pull', 'origin', currentBranch]);
+  final pullResult = await Process.run('git', ['pull']);
+  if (pullResult.exitCode != 0) {
+    logger
+      ..err('❌ Erro no pull:')
+      ..err(pullResult.stderr.toString());
+    return;
+  }
 
-    if (pullResult.exitCode == 0) {
-      _log('✅ Pull concluído - código sincronizado!');
-    } else {
-      _log('⚠️  Warning no pull: ${pullResult.stderr}');
-      _log('💡 Tente executar: git pull origin $currentBranch');
-    }
+  logger
+    ..info('✅ Sincronização concluída')
+    ..info('📊 Verificando status do repositório...');
 
-    // 4. Mostrar status final
-    if (currentBranch == 'main') {
-      _log('🏷️  Verificando se tag foi criada pelo GitHub Actions...');
-      await Future.delayed(Duration(seconds: 2));
-
-      final tagsResult = await Process.run('git', ['tag', '--sort=-version:refname']);
-      final latestTag = tagsResult.stdout.toString().split('\n').first.trim();
-
-      if (latestTag.isNotEmpty) {
-        _log('✅ Latest tag: $latestTag');
-        _log('🔗 Release: https://github.com/moreirawebmaster/stmr_cli/releases/tag/$latestTag');
-      }
-    }
-
-    _log('🎉 Push and Sync concluído com sucesso!');
-  } catch (e) {
-    _log('❌ Erro no push and sync: $e');
-    exit(1);
+  final statusResult = await Process.run('git', ['status', '--porcelain']);
+  if (statusResult.stdout.toString().trim().isNotEmpty) {
+    logger.warn('Existem alterações não commitadas');
+  } else {
+    logger.info('✅ Repositório está limpo e sincronizado');
   }
 }
 
-/// Log helper para evitar warnings de lint
-void _log(String message) {
-  // ignore: avoid_print
-  print(message);
+Future<bool> _isMainBranch() async {
+  try {
+    final result = await Process.run('git', ['branch', '--show-current']);
+    return result.stdout.toString().trim() == 'main';
+  } catch (e) {
+    Logger()
+      ..err('Erro ao verificar branch: $e')
+      ..err('Continuando com verificação padrão...');
+    return false;
+  }
 }

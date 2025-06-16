@@ -2,80 +2,62 @@
 
 import 'dart:io';
 
-import 'package:yaml/yaml.dart';
+import 'package:mason_logger/mason_logger.dart';
 
-void main(List<String> args) async {
-  try {
-    // Verifica se está na branch main
-    final branchResult = await Process.run('git', ['branch', '--show-current']);
-    final currentBranch = branchResult.stdout.toString().trim();
+void main() async {
+  final logger = Logger();
 
-    if (currentBranch != 'main') {
-      _log('⚠️  Auto-versionamento apenas na branch main. Branch atual: $currentBranch');
-      exit(0);
-    }
-
-    // Lê o pubspec.yaml atual
-    final pubspecFile = File('pubspec.yaml');
-    if (!pubspecFile.existsSync()) {
-      _log('❌ Arquivo pubspec.yaml não encontrado');
-      exit(1);
-    }
-
-    final pubspecContent = await pubspecFile.readAsString();
-    final yaml = loadYaml(pubspecContent) as Map<dynamic, dynamic>;
-
-    final currentVersion = yaml['version'] as String?;
-    if (currentVersion == null) {
-      _log('❌ Versão não encontrada no pubspec.yaml');
-      exit(1);
-    }
-
-    // Incrementa a versão (patch)
-    final newVersion = _incrementVersion(currentVersion);
-
-    // Atualiza o pubspec.yaml
-    final updatedPubspecContent = pubspecContent.replaceFirst(
-      RegExp(r'version:\s*' + RegExp.escape(currentVersion)),
-      'version: $newVersion',
-    );
-    await pubspecFile.writeAsString(updatedPubspecContent);
-
-    // Atualiza o version.dart
-    final versionFile = File('lib/src/version.dart');
-    final versionContent = '''/// Versão do STMR CLI
-/// Esta versão é sincronizada automaticamente com pubspec.yaml
-const String cliVersion = '$newVersion';''';
-
-    await versionFile.writeAsString(versionContent);
-
-    _log('🚀 Versão incrementada: $currentVersion → $newVersion');
-    _log('📄 Arquivos atualizados: pubspec.yaml, lib/src/version.dart');
-  } catch (e) {
-    _log('❌ Erro ao incrementar versão: $e');
-    exit(1);
-  }
-}
-
-/// Log helper para evitar warnings de lint
-void _log(String message) {
-  // ignore: avoid_print
-  print(message);
-}
-
-/// Incrementa a versão patch (x.y.z -> x.y.z+1)
-String _incrementVersion(String version) {
-  // Remove qualquer sufixo como +build ou -pre
-  final cleanVersion = version.split('+').first.split('-').first;
-  final parts = cleanVersion.split('.');
-
-  if (parts.length < 3) {
-    throw Exception('Formato de versão inválido: $version');
+  if (!await _isMainBranch()) {
+    logger.warn('Não está na branch main, pulando increment de versão');
+    return;
   }
 
+  final pubspecFile = File('pubspec.yaml');
+  if (!pubspecFile.existsSync()) {
+    logger.err('pubspec.yaml não encontrado');
+    return;
+  }
+
+  final content = pubspecFile.readAsStringSync();
+  final versionRegex = RegExp(r'version:\s*([0-9]+\.[0-9]+\.[0-9]+)');
+  final match = versionRegex.firstMatch(content);
+
+  if (match == null) {
+    logger.err('Versão não encontrada no pubspec.yaml');
+    return;
+  }
+
+  final currentVersion = match.group(1)!;
+  final parts = currentVersion.split('.');
   final major = int.parse(parts[0]);
   final minor = int.parse(parts[1]);
-  final patch = int.parse(parts[2]) + 1;
+  final patch = int.parse(parts[2]);
 
-  return '$major.$minor.$patch';
+  final newPatch = patch + 1;
+  final newVersion = '$major.$minor.$newPatch';
+
+  final newContent = content.replaceFirst(
+    versionRegex,
+    'version: $newVersion',
+  );
+
+  pubspecFile.writeAsStringSync(newContent);
+
+  File('lib/src/version.dart').writeAsStringSync("const String cliVersion = '$newVersion';\n");
+
+  logger
+    ..info('✅ Versão incrementada para $newVersion')
+    ..info('📝 Arquivo de versão criado com sucesso!');
+}
+
+Future<bool> _isMainBranch() async {
+  try {
+    final result = await Process.run('git', ['branch', '--show-current']);
+    return result.stdout.toString().trim() == 'main';
+  } catch (e) {
+    Logger()
+      ..err('Erro ao verificar branch: $e')
+      ..warn('Continuando com verificação padrão...');
+    return false;
+  }
 }

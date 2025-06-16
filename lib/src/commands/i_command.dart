@@ -6,5 +6,5 @@ abstract class ICommand {
   ArgParser build();
 
   /// Executa o comando com os argumentos fornecidos
-  Future<void> run(ArgResults command);
+  Future<void> run(final ArgResults command);
 }
