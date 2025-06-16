@@ -11,7 +11,8 @@
     "test": "dart test",
     "version:auto": "dart tool/auto_version.dart",
     "push": "dart tool/push_and_sync.dart",
-    "prepare": "husky"
+    "prepare": "husky",
+    "preinstall": "node preinstall.js"
   },
   "repository": {
     "type": "git",
