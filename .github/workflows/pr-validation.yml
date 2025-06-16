@@ -1,0 +1,104 @@
+name: 🔍 PR Validation
+
+on:
+  pull_request:
+    branches:
+      - main
+      - develop
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  validate:
+    name: 🧪 Validate PR
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: 📥 Checkout code
+      uses: actions/checkout@v4
+
+    - name: 🎯 Setup Dart
+      uses: dart-lang/setup-dart@v1
+
+    - name: 📦 Get dependencies
+      run: dart pub get
+
+    - name: 🔍 Analyze code
+      run: |
+        echo "🔍 Running dart analyze..."
+        dart analyze --fatal-infos
+
+    - name: 🧪 Run tests
+      run: |
+        echo "🧪 Running tests..."
+        dart test
+
+    - name: 📊 Test coverage (optional)
+      continue-on-error: true
+      run: |
+        echo "📊 Checking test coverage..."
+        dart test --coverage=coverage
+        echo "Coverage report would be generated here"
+
+    - name: ✅ Validation complete
+      run: |
+        echo "✅ All validations passed!"
+        echo "🎯 Code quality: PASSED"
+        echo "🧪 Tests: PASSED"
+        echo "📊 Ready for review!"
+
+    - name: 💬 Comment on PR
+      if: always()
+      uses: actions/github-script@v7
+      with:
+        script: |
+          const { data: comments } = await github.rest.issues.listComments({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            issue_number: context.issue.number,
+          });
+          
+          const botComment = comments.find(comment => 
+            comment.user.type === 'Bot' && 
+            comment.body.includes('🤖 PR Validation Results')
+          );
+          
+          const success = '${{ job.status }}' === 'success';
+          const body = success 
+            ? `🤖 **PR Validation Results**
+            
+            ✅ **All checks passed!**
+            
+            - 🔍 Code analysis: ✅ PASSED
+            - 🧪 Tests: ✅ PASSED
+            - 📊 Quality: ✅ PASSED
+            
+            🎉 This PR is ready for review!`
+            : `🤖 **PR Validation Results**
+            
+            ❌ **Some checks failed**
+            
+            Please check the workflow logs and fix any issues before requesting review.
+            
+            📋 **Next steps:**
+            1. Check the failed workflow steps
+            2. Fix any lint or test issues
+            3. Push your changes to update this PR`;
+          
+          if (botComment) {
+            await github.rest.issues.updateComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              comment_id: botComment.id,
+              body: body
+            });
+          } else {
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: body
+            });
+          } 

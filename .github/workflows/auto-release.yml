@@ -1,7 +1,10 @@
-name: Auto Release
+name: CI/CD Pipeline
 
 on:
   push:
+    branches:
+      - main
+  pull_request:
     branches:
       - main
 
@@ -11,66 +14,137 @@ permissions:
   pull-requests: read
 
 jobs:
-  auto-release:
+  test:
+    name: 🧪 Tests & Quality
     runs-on: ubuntu-latest
     
     steps:
-    - name: Checkout code
+    - name: 📥 Checkout code
+      uses: actions/checkout@v4
+
+    - name: 🎯 Setup Dart
+      uses: dart-lang/setup-dart@v1
+
+    - name: 📦 Get dependencies
+      run: dart pub get
+
+    - name: 🔍 Analyze code
+      run: dart analyze
+
+    - name: 🧪 Run tests
+      run: dart test
+
+    - name: ✅ Quality check passed
+      run: echo "All quality checks passed!"
+
+  version-and-release:
+    name: 🚀 Version & Release
+    runs-on: ubuntu-latest
+    needs: test
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    
+    steps:
+    - name: 📥 Checkout code
       uses: actions/checkout@v4
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
         fetch-depth: 0
 
-    - name: Setup Dart
+    - name: 🎯 Setup Dart
       uses: dart-lang/setup-dart@v1
 
-    - name: Get dependencies
+    - name: 📦 Get dependencies
       run: dart pub get
 
-    - name: Get current version
-      id: version
+    - name: 📊 Get current version
+      id: current_version
       run: |
-        VERSION=$(grep "version:" pubspec.yaml | sed 's/version: //')
+        VERSION=$(grep "version:" pubspec.yaml | sed 's/version: //' | tr -d ' ')
         echo "version=$VERSION" >> $GITHUB_OUTPUT
-        echo "Current version: $VERSION"
+        echo "📋 Current version: $VERSION"
 
-    - name: Check if tag exists
-      id: tag_check
+    - name: 🔍 Check if version bump needed
+      id: version_check
       run: |
-        if git rev-parse "v${{ steps.version.outputs.version }}" >/dev/null 2>&1; then
-          echo "exists=true" >> $GITHUB_OUTPUT
-          echo "Tag v${{ steps.version.outputs.version }} already exists"
+        CURRENT_VERSION="${{ steps.current_version.outputs.version }}"
+        
+        # Verificar se a tag já existe
+        if git rev-parse "v$CURRENT_VERSION" >/dev/null 2>&1; then
+          echo "needs_bump=true" >> $GITHUB_OUTPUT
+          echo "🔄 Version bump needed - tag v$CURRENT_VERSION already exists"
         else
-          echo "exists=false" >> $GITHUB_OUTPUT
-          echo "Tag v${{ steps.version.outputs.version }} does not exist"
+          echo "needs_bump=false" >> $GITHUB_OUTPUT
+          echo "✅ Version is ready for release - v$CURRENT_VERSION"
         fi
 
-    - name: Create tag and release
-      if: steps.tag_check.outputs.exists == 'false'
+    - name: ⬆️ Bump version
+      if: steps.version_check.outputs.needs_bump == 'true'
+      id: bump_version
+      run: |
+        CURRENT_VERSION="${{ steps.current_version.outputs.version }}"
+        
+        # Parse version (major.minor.patch)
+        IFS='.' read -r major minor patch <<< "$CURRENT_VERSION"
+        
+        # Increment patch version
+        new_patch=$((patch + 1))
+        NEW_VERSION="$major.$minor.$new_patch"
+        
+        # Update pubspec.yaml
+        sed -i "s/version: $CURRENT_VERSION/version: $NEW_VERSION/" pubspec.yaml
+        
+        # Update version file
+        echo "const String cliVersion = '$NEW_VERSION';" > lib/src/version.dart
+        
+        echo "new_version=$NEW_VERSION" >> $GITHUB_OUTPUT
+        echo "📈 Version bumped: $CURRENT_VERSION → $NEW_VERSION"
+
+    - name: 💾 Commit version bump
+      if: steps.version_check.outputs.needs_bump == 'true'
+      run: |
+        NEW_VERSION="${{ steps.bump_version.outputs.new_version }}"
+        
+        git config user.name "github-actions[bot]"
+        git config user.email "github-actions[bot]@users.noreply.github.com"
+        
+        git add pubspec.yaml lib/src/version.dart
+        git commit -m "🔖 chore: Bump version to $NEW_VERSION [skip ci]"
+        git push origin main
+        
+        echo "✅ Version bump committed and pushed"
+
+    - name: 🏷️ Create tag and release
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       run: |
-        VERSION=${{ steps.version.outputs.version }}
+        # Use new version if bumped, otherwise current version
+        if [ "${{ steps.version_check.outputs.needs_bump }}" == "true" ]; then
+          VERSION="${{ steps.bump_version.outputs.new_version }}"
+        else
+          VERSION="${{ steps.current_version.outputs.version }}"
+        fi
         
-        # Criar tag
+        echo "🏷️ Creating tag and release for v$VERSION"
+        
+        # Create tag
         git config user.name "github-actions[bot]"
         git config user.email "github-actions[bot]@users.noreply.github.com"
         git tag -a "v$VERSION" -m "Release v$VERSION"
         git push origin "v$VERSION"
         
-        # Criar release com release notes automáticas
+        # Create release with auto-generated notes
         gh release create "v$VERSION" \
-          --title "Release v$VERSION" \
+          --title "🚀 Release v$VERSION" \
           --generate-notes \
           --latest
 
-    - name: Release created
-      if: steps.tag_check.outputs.exists == 'false'
+    - name: 🎉 Success
       run: |
-        echo "✅ Release v${{ steps.version.outputs.version }} created successfully!"
-        echo "🔗 Check it out: https://github.com/${{ github.repository }}/releases/tag/v${{ steps.version.outputs.version }}"
-
-    - name: Tag already exists
-      if: steps.tag_check.outputs.exists == 'true'
-      run: |
-        echo "⚠️  Tag v${{ steps.version.outputs.version }} already exists, skipping release creation" 
+        if [ "${{ steps.version_check.outputs.needs_bump }}" == "true" ]; then
+          VERSION="${{ steps.bump_version.outputs.new_version }}"
+          echo "🎉 Successfully bumped version and created release v$VERSION!"
+        else
+          VERSION="${{ steps.current_version.outputs.version }}"
+          echo "🎉 Successfully created release v$VERSION!"
+        fi
+        echo "🔗 Check it out: https://github.com/${{ github.repository }}/releases/tag/v$VERSION" 
