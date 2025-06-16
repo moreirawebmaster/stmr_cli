@@ -1,35 +1,12 @@
 #!/usr/bin/env sh
 
-echo "🔍 Verificando se precisa incrementar versão antes do push..."
+echo "⚠️  Hook pre-push desabilitado"
+echo "🚀 Versionamento agora é responsabilidade da pipeline CI/CD"
+echo "📤 Fazendo push normalmente..."
 
-# Verifica se está na branch main
-current_branch=$(git branch --show-current)
-
-if [ "$current_branch" = "main" ]; then
-  echo "📦 Executando auto-versionamento na branch main..."
-  
-  # Executa o bump da versão
-  dart tool/auto_version.dart
-  
-  if [ $? -eq 0 ]; then
-    echo "✅ Versionamento automático concluído"
-    
-    # Pega a nova versão do pubspec.yaml
-    new_version=$(grep "version:" pubspec.yaml | sed 's/version: //')
-    
-    # Adiciona os arquivos modificados e amenda ao último commit
-    git add pubspec.yaml lib/src/version.dart
-    git commit --amend --no-edit
-    
-    echo "🚀 Versão $new_version adicionada ao último commit, prosseguindo com push..."
-    
-    # Após o push ser bem-sucedido, executa post-push actions
-    # Nota: Este hook executa ANTES do push, então criaremos um script separado
-    
-  else
-    echo "❌ Erro no versionamento automático"
-    exit 1
-  fi
-else
-  echo "⚠️  Pulando auto-versionamento (não está na branch main)"
-fi 
+# Pipeline CI/CD assumiu as responsabilidades de:
+# - Versionamento automático
+# - Criação de tags
+# - Criação de releases
+# 
+# Este hook foi mantido apenas para informar sobre a mudança 

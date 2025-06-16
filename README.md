@@ -26,6 +26,173 @@ cd stmr_cli
 dart pub global activate --source path .
 ```
 
+## 🛠️ Setup para Desenvolvedores
+
+### 📋 Pré-requisitos
+
+- **Dart SDK** >= 3.0.0
+- **Flutter** >= 3.10.0
+- **Node.js** >= 16.0.0 (para Husky)
+- **Git** configurado
+
+### 🚀 Setup Inicial (Novos Desenvolvedores)
+
+```bash
+# 1. Clone o repositório
+git clone https://github.com/moreirawebmaster/stmr_cli.git
+cd stmr_cli
+
+# 2. Instalar dependências Dart
+dart pub get
+
+# 3. Instalar dependências Node.js (para Husky)
+npm install
+
+# 4. Configurar Husky (hooks automáticos)
+npm run prepare
+
+# 5. Verificar se tudo está funcionando
+dart analyze
+dart test
+```
+
+### 🔧 Configuração de Hooks
+
+O projeto usa **Husky** para hooks automáticos que garantem qualidade de código:
+
+#### 🛡️ Pre-commit Hook
+- **Localização**: `.husky/pre-commit`
+- **Função**: Valida qualidade do código antes de cada commit
+- **Verificações**:
+  - ✅ `dart analyze` - Análise estática
+  - ❌ Bloqueia commits com problemas de lint
+
+#### 📤 Pre-push Hook  
+- **Localização**: `.husky/pre-push`
+- **Status**: Desabilitado (versionamento delegado para CI/CD)
+- **Função**: Apenas informa sobre a mudança de responsabilidade
+
+### 🔄 Fluxo de Desenvolvimento
+
+```bash
+# 1. Criar branch para feature
+git checkout -b feature/nova-funcionalidade
+
+# 2. Fazer alterações no código
+# ... desenvolvimento ...
+
+# 3. Verificar qualidade (opcional - hook fará automaticamente)
+dart analyze
+dart test
+
+# 4. Commit (hook pre-commit validará automaticamente)
+git add .
+git commit -m "feat: adiciona nova funcionalidade"
+# ✅ Hook pre-commit: dart analyze executado automaticamente
+
+# 5. Push (sem validações extras - pipeline CI/CD assumiu)
+git push origin feature/nova-funcionalidade
+# ✅ Pipeline CI/CD executará testes e validações
+
+# 6. Criar Pull Request
+# ✅ Pipeline de PR validará código automaticamente
+```
+
+### 🚨 Troubleshooting
+
+#### Hook Pre-commit Falhando
+```bash
+# Ver problemas específicos
+dart analyze
+
+# Corrigir automaticamente (quando possível)
+dart fix --apply
+
+# Tentar commit novamente
+git commit -m "sua mensagem"
+```
+
+#### Husky Não Funcionando
+```bash
+# Reinstalar Husky
+rm -rf node_modules
+npm install
+npm run prepare
+
+# Verificar permissões
+chmod +x .husky/pre-commit
+chmod +x .husky/pre-push
+```
+
+#### Problemas de Dependências
+```bash
+# Limpar cache Dart
+dart pub cache clean
+dart pub get
+
+# Limpar cache Node
+npm cache clean --force
+npm install
+```
+
+### 📊 Pipeline CI/CD
+
+O projeto possui pipeline automatizada que:
+
+#### 🧪 Para Pull Requests:
+- Executa `dart analyze`
+- Executa `dart test`
+- Comenta automaticamente no PR com resultados
+
+#### 🚀 Para Push na Main:
+- Executa testes completos
+- **Versionamento automático** (bump patch)
+- Atualiza `pubspec.yaml` e `lib/src/version.dart`
+- Cria **tag** automaticamente
+- Cria **release** no GitHub
+
+### 🎯 Comandos Úteis para Desenvolvimento
+
+```bash
+# Executar CLI localmente
+dart run bin/stmr.dart --help
+
+# Executar testes
+dart test
+
+# Análise de código
+dart analyze
+
+# Corrigir problemas automaticamente
+dart fix --apply
+
+# Sincronização manual (opcional)
+dart run tool/push_and_sync.dart
+
+# Verificar versão atual
+grep "version:" pubspec.yaml
+```
+
+### 📁 Estrutura do Projeto
+
+```
+stmr_cli/
+├── .github/workflows/     # Pipeline CI/CD
+│   ├── auto-release.yml   # Pipeline principal
+│   └── pr-validation.yml  # Validação de PRs
+├── .husky/               # Hooks do Husky
+│   ├── pre-commit        # Validação de lint
+│   └── pre-push          # Desabilitado
+├── .githooks/            # Hooks alternativos (Git nativo)
+│   └── pre-commit        # Backup do hook de lint
+├── bin/                  # Executável principal
+├── lib/                  # Código fonte
+├── test/                 # Testes
+├── tool/                 # Ferramentas auxiliares
+├── package.json          # Configuração Node.js/Husky
+└── pubspec.yaml          # Configuração Dart
+```
+
 ## 🛠️ Comandos Disponíveis
 
 ### 🎯 Ajuda

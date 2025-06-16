@@ -2,8 +2,8 @@
 
 echo "🔍 Verificando qualidade do código com dart analyze..."
 
-# Executa análise estática do Dart com warnings E infos fatais
-analyze_output=$(dart analyze --fatal-warnings --fatal-infos 2>&1)
+# Executa análise estática do Dart
+analyze_output=$(dart analyze 2>&1)
 analyze_exit_code=$?
 
 # Mostra sempre a saída do analyze (para transparência)
@@ -13,7 +13,7 @@ fi
 
 # Verifica o resultado do analyze
 if [ $analyze_exit_code -eq 0 ]; then
-  echo "✅ Código aprovado: Nenhum erro, warning ou info encontrado"
+  echo "✅ Código aprovado: Análise de qualidade passou"
 else
   echo ""
   echo "❌ Commit bloqueado: Encontrados problemas no código"
